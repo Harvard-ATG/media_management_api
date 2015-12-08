@@ -14,6 +14,9 @@ DEBUG_TOOLBAR_CONFIG = {
     'INTERCEPT_REDIRECTS': False,
 }
 
+# CORS headers
+CORS_ORIGIN_ALLOW_ALL = True
+
 # Logging
 
 # Log to console instead of a file when running locally
