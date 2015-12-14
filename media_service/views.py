@@ -3,7 +3,8 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
-from media_service.serializers import UserSerializer, GroupSerializer
+from media_service.models import Course, Collection
+from media_service.serializers import UserSerializer, GroupSerializer, CourseSerializer, CollectionSerializer
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -18,3 +19,17 @@ class GroupViewSet(viewsets.ModelViewSet):
     """
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+
+class CourseViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows courses to be viewed or edited.
+    """
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+
+class CollectionViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows collections to be viewed or edited.
+    """
+    queryset = Collection.objects.all()
+    serializer_class = CollectionSerializer
