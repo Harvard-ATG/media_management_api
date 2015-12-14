@@ -18,6 +18,11 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
         model = Course
         fields = ('url', 'title', 'lti_context_id', 'created', 'updated')
 
+class CourseMediaSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Course
+        fields = ('url', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
+
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Collection
@@ -26,4 +31,4 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
 class CollectionItemSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = CollectionItem
-        fields = ('url', 'title', 'description', 'sort_order', 'collection', 'media_file', 'created', 'updated')
+        fields = ('url', 'course_media', 'created', 'updated')
