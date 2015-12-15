@@ -15,17 +15,11 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='BaseModel',
+            name='Collection',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
-            ],
-        ),
-        migrations.CreateModel(
-            name='Collection',
-            fields=[
-                ('basemodel_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='media_service.BaseModel')),
                 ('title', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
             ],
@@ -33,24 +27,28 @@ class Migration(migrations.Migration):
                 'verbose_name': 'collection',
                 'verbose_name_plural': 'collections',
             },
-            bases=('media_service.basemodel', media_service.models.SortOrderModelMixin),
+            bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
             name='CollectionItem',
             fields=[
-                ('basemodel_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='media_service.BaseModel')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', models.DateTimeField(auto_now_add=True)),
+                ('updated', models.DateTimeField(auto_now=True)),
                 ('collection', models.ForeignKey(to='media_service.Collection')),
             ],
             options={
                 'verbose_name': 'collection_item',
                 'verbose_name_plural': 'collection_items',
             },
-            bases=('media_service.basemodel', media_service.models.SortOrderModelMixin),
+            bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
             name='Course',
             fields=[
-                ('basemodel_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='media_service.BaseModel')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', models.DateTimeField(auto_now_add=True)),
+                ('updated', models.DateTimeField(auto_now=True)),
                 ('title', models.CharField(max_length=255)),
                 ('lti_context_id', models.CharField(max_length=255)),
             ],
@@ -59,12 +57,13 @@ class Migration(migrations.Migration):
                 'verbose_name': 'course',
                 'verbose_name_plural': 'courses',
             },
-            bases=('media_service.basemodel',),
         ),
         migrations.CreateModel(
             name='CourseMedia',
             fields=[
-                ('basemodel_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='media_service.BaseModel')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', models.DateTimeField(auto_now_add=True)),
+                ('updated', models.DateTimeField(auto_now=True)),
                 ('original_file_name', models.CharField(max_length=4096, null=True)),
                 ('title', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
@@ -74,12 +73,14 @@ class Migration(migrations.Migration):
                 'verbose_name': 'course_media',
                 'verbose_name_plural': 'course_media',
             },
-            bases=('media_service.basemodel', media_service.models.SortOrderModelMixin),
+            bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
             name='MediaStore',
             fields=[
-                ('basemodel_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='media_service.BaseModel')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', models.DateTimeField(auto_now_add=True)),
+                ('updated', models.DateTimeField(auto_now=True)),
                 ('file_name', models.CharField(max_length=1024)),
                 ('file_size', models.PositiveIntegerField()),
                 ('file_md5hash', models.CharField(max_length=32)),
@@ -92,12 +93,13 @@ class Migration(migrations.Migration):
                 'verbose_name': 'mediastore',
                 'verbose_name_plural': 'mediastores',
             },
-            bases=('media_service.basemodel',),
         ),
         migrations.CreateModel(
             name='UserProfile',
             fields=[
-                ('basemodel_ptr', models.OneToOneField(parent_link=True, auto_created=True, primary_key=True, serialize=False, to='media_service.BaseModel')),
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('created', models.DateTimeField(auto_now_add=True)),
+                ('updated', models.DateTimeField(auto_now=True)),
                 ('lti_user_id', models.CharField(unique=True, max_length=1024, blank=True)),
                 ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
             ],
@@ -105,7 +107,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'user_profile',
                 'verbose_name_plural': 'user_profiles',
             },
-            bases=('media_service.basemodel',),
         ),
         migrations.AddField(
             model_name='coursemedia',

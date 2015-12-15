@@ -5,6 +5,8 @@ from django.conf import settings
 class BaseModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    class Meta:
+        abstract = True
 
 class SortOrderModelMixin(object):
     sort_order = models.IntegerField(default=0)

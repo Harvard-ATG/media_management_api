@@ -1,0 +1,39 @@
+[
+{
+  "model": "media_service.course",
+  "pk": 1,
+  "fields": {
+    "title": "Arthur's Demo Course",
+    "lti_context_id": "2a8b2d3fa51ea413d19e480fb6c2eb085b7866a9",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.course",
+  "pk": 2,
+  "fields": {
+    "title": "Jazahn's Demo Course",
+    "lti_context_id": "01cc622dbb0d57a76ea5f0caa20a63cf8685e1ef",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "pk": 3,
+  "model": "media_service.course",
+  "fields": {
+    "title": "MATH 23A: Linear Algebra and Real Analysis I",
+    "lti_context_id": "0f51be9dd2bf866dfbccbc0aa420e57027c63608",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "pk": 4,
+  "model": "media_service.course",
+  "fields": {
+    "title": "VIETNAM BA: Elementary Vietnamese",
+    "lti_context_id": "e74c7d920cb4b86aa56138de490abc6c17583460",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+}
+]
