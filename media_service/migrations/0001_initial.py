@@ -22,6 +22,7 @@ class Migration(migrations.Migration):
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('title', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
+                ('sort_order', models.IntegerField(default=0)),
             ],
             options={
                 'verbose_name': 'collection',
@@ -35,6 +36,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
+                ('sort_order', models.IntegerField(default=0)),
                 ('collection', models.ForeignKey(to='media_service.Collection')),
             ],
             options={
@@ -67,6 +69,7 @@ class Migration(migrations.Migration):
                 ('original_file_name', models.CharField(max_length=4096, null=True)),
                 ('title', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
+                ('sort_order', models.IntegerField(default=0)),
                 ('course', models.ForeignKey(to='media_service.Course')),
             ],
             options={

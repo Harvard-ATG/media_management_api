@@ -9,10 +9,16 @@ class BaseModel(models.Model):
         abstract = True
 
 class SortOrderModelMixin(object):
-    sort_order = models.IntegerField(default=0)
     @classmethod
-    def next_sort_order(cls, filters):
-        result = cls.objects.filter(**filters).aggregate(n=Max('sort_order'))
+    def next_sort_order(self, filters=None):
+        '''
+        Returns the next available sort order for the given set of filters.
+        '''
+        if filters is None:
+            objects = self.objects.all()
+        else:
+            objects = self.objects.filter(**filters)
+        result = objects.aggregate(n=Max('sort_order'))
         if result['n'] is None:
             return 1
         return result['n'] + 1
@@ -63,6 +69,7 @@ class CourseMedia(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     owner = models.ForeignKey(UserProfile, null=True)
+    sort_order = models.IntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
@@ -80,6 +87,7 @@ class Collection(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    sort_order = models.IntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
@@ -96,6 +104,7 @@ class Collection(BaseModel, SortOrderModelMixin):
 class CollectionItem(BaseModel, SortOrderModelMixin):
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
     course_media = models.ForeignKey(CourseMedia, on_delete=models.CASCADE)
+    sort_order = models.IntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if not self.sort_order:

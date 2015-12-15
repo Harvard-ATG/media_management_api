@@ -18,8 +18,8 @@
     "updated": "2015-12-15T15:42:33.443434Z"
   }
 },{
-  "pk": 3,
   "model": "media_service.course",
+  "pk": 3,
   "fields": {
     "title": "MATH 23A: Linear Algebra and Real Analysis I",
     "lti_context_id": "0f51be9dd2bf866dfbccbc0aa420e57027c63608",
@@ -27,11 +27,51 @@
     "updated": "2015-12-15T15:42:33.443434Z"
   }
 },{
-  "pk": 4,
   "model": "media_service.course",
+  "pk": 4,
   "fields": {
     "title": "VIETNAM BA: Elementary Vietnamese",
     "lti_context_id": "e74c7d920cb4b86aa56138de490abc6c17583460",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 1,
+  "fields": {
+    "title": "Scrambled Eggs Super!",
+    "course": 1,
+    "sort_order": 1,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 2,
+  "fields": {
+    "title": "If I Ran the Circus",
+    "course": 1,
+    "sort_order": 2,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 3,
+  "fields": {
+    "title": "How the Grinch Stole Christmas!",
+    "course": 1,
+    "sort_order": 3,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 4,
+  "fields": {
+    "title": "Testing 1...2..3...",
+    "course": 2,
+    "sort_order": 1,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }

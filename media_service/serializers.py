@@ -7,7 +7,6 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         model = User
         fields = ('url', 'id', 'username', 'email', 'groups')
 
-
 class GroupSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Group
@@ -31,4 +30,4 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
 class CollectionItemSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = CollectionItem
-        fields = ('url', 'course_media', 'created', 'updated')
+        fields = ('url', 'course_media', 'sort_order', 'created', 'updated')
