@@ -13,10 +13,12 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'course_image', 'sort_order', 'created', 'updated')
 
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
+    course_id = serializers.IntegerField(source="course.pk")
+    course_url = serializers.HyperlinkedIdentityField(view_name="course-detail", lookup_field="pk")
     images_url = serializers.HyperlinkedIdentityField(view_name="collection-images", lookup_field="pk")
     class Meta:
         model = Collection
-        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course', 'images_url', 'created', 'updated')
+        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course_url', 'course_id', 'images_url', 'created', 'updated')
 
 class CollectionSerializerWithRelated(CollectionSerializer):
     images = CollectionImageSerializer(many=True, read_only=True)
@@ -25,10 +27,25 @@ class CollectionSerializerWithRelated(CollectionSerializer):
         fields = CollectionSerializer.Meta.fields + ('images', )
 
 class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
-    courses_url = serializers.HyperlinkedIdentityField(view_name="course-list", lookup_field="pk")
+    url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
+    course_url = serializers.HyperlinkedIdentityField(view_name="course-detail", lookup_field="pk")
     class Meta:
         model = CourseImage
-        fields = ('url', 'courses_url', 'id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
+        fields = ('url', 'course_url', 'id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
+
+class CreateCourseImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseImage
+        fields = ('id', 'title', 'course', 'description')
+    
+    def create(self, validated_data):
+        course_image = CourseImage(
+            course=validated_data['course'],
+            title=validated_data['title'],
+            description=validated_data['description']
+        )
+        course_image.save()
+        return course_image
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
     collections_url = serializers.HyperlinkedIdentityField(view_name="course-collections", lookup_field="pk")
