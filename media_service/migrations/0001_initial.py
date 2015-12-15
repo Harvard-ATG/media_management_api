@@ -31,17 +31,17 @@ class Migration(migrations.Migration):
             bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
-            name='CollectionItem',
+            name='CollectionImage',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('sort_order', models.IntegerField(default=0)),
-                ('collection', models.ForeignKey(to='media_service.Collection')),
+                ('collection', models.ForeignKey(related_name='images', to='media_service.Collection')),
             ],
             options={
-                'verbose_name': 'collection_item',
-                'verbose_name_plural': 'collection_items',
+                'verbose_name': 'collection_image',
+                'verbose_name_plural': 'collection_images',
             },
             bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='CourseMedia',
+            name='CourseImage',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -70,11 +70,11 @@ class Migration(migrations.Migration):
                 ('title', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
                 ('sort_order', models.IntegerField(default=0)),
-                ('course', models.ForeignKey(to='media_service.Course')),
+                ('course', models.ForeignKey(related_name='images', to='media_service.Course')),
             ],
             options={
-                'verbose_name': 'course_media',
-                'verbose_name_plural': 'course_media',
+                'verbose_name': 'course_image',
+                'verbose_name_plural': 'course_images',
             },
             bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
@@ -93,8 +93,8 @@ class Migration(migrations.Migration):
                 ('reference_count', models.PositiveIntegerField(default=0)),
             ],
             options={
-                'verbose_name': 'mediastore',
-                'verbose_name_plural': 'mediastores',
+                'verbose_name': 'media_store',
+                'verbose_name_plural': 'media_stores',
             },
         ),
         migrations.CreateModel(
@@ -112,23 +112,23 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.AddField(
-            model_name='coursemedia',
-            name='media_file',
+            model_name='courseimage',
+            name='media_store',
             field=models.ForeignKey(on_delete=django.db.models.deletion.SET_NULL, to='media_service.MediaStore', null=True),
         ),
         migrations.AddField(
-            model_name='coursemedia',
+            model_name='courseimage',
             name='owner',
             field=models.ForeignKey(to='media_service.UserProfile', null=True),
         ),
         migrations.AddField(
-            model_name='collectionitem',
-            name='course_media',
-            field=models.ForeignKey(to='media_service.CourseMedia'),
+            model_name='collectionimage',
+            name='course_image',
+            field=models.ForeignKey(to='media_service.CourseImage'),
         ),
         migrations.AddField(
             model_name='collection',
             name='course',
-            field=models.ForeignKey(to='media_service.Course'),
+            field=models.ForeignKey(related_name='collections', to='media_service.Course'),
         ),
     ]

@@ -33,8 +33,8 @@ class MediaStore(BaseModel):
     reference_count = models.PositiveIntegerField(default=0)
 
     class Meta:
-        verbose_name = 'mediastore'
-        verbose_name_plural = 'mediastores'
+        verbose_name = 'media_store'
+        verbose_name_plural = 'media_stores'
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.file_name)
@@ -62,58 +62,73 @@ class Course(BaseModel):
     def __unicode__(self):
         return "{0}:{1}:{2}".format(self.id, self.lti_context_id, self.title)
 
-class CourseMedia(BaseModel, SortOrderModelMixin):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    media_file = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
+class CourseImage(BaseModel, SortOrderModelMixin):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='images')
+    media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     original_file_name = models.CharField(max_length=4096, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     owner = models.ForeignKey(UserProfile, null=True)
     sort_order = models.IntegerField(default=0)
 
+    class Meta:
+        verbose_name = 'course_image'
+        verbose_name_plural = 'course_images'
+
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
-        super(CourseMedia, self).save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = 'course_media'
-        verbose_name_plural = 'course_media'
+        super(CourseImage, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
 
+    @classmethod
+    def get_course_images(cls, course_pk):
+        images = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
+        return images
+    
 class Collection(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='collections')
     sort_order = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'collection'
+        verbose_name_plural = 'collections'
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
         super(Collection, self).save(*args, **kwargs)
 
-    class Meta:
-        verbose_name = 'collection'
-        verbose_name_plural = 'collections'
-
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
 
-class CollectionItem(BaseModel, SortOrderModelMixin):
-    collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
-    course_media = models.ForeignKey(CourseMedia, on_delete=models.CASCADE)
+    @classmethod
+    def get_course_collections(cls, course_pk):
+        collections = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
+        return collections
+
+class CollectionImage(BaseModel, SortOrderModelMixin):
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='images')
+    course_image = models.ForeignKey(CourseImage, on_delete=models.CASCADE)
     sort_order = models.IntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'collection_image'
+        verbose_name_plural = 'collection_images'
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"collection__pk": self.collection.pk})
         super(CollectionItem, self).save(*args, **kwargs)
 
-    class Meta:
-        verbose_name = 'collection_item'
-        verbose_name_plural = 'collection_items'
-
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
+
+    @classmethod
+    def get_collection_images(cls, collection_pk):
+        images = cls.objects.filter(collection__pk=collection_pk).order_by('sort_order')
+        return images
