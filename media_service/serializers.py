@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionImage, CourseImage
 
 def media_store_to_representation(media_store_instance):
@@ -40,7 +41,8 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
         data =  super(CollectionImageSerializer, self).to_representation(instance)
         data['type'] = 'collectionimages'
         data.update({
-            "image_id": instance.course_image.id,
+            "url": reverse('collectionimages-detail', kwargs={'pk': instance.pk}, request=self.context['request']),
+            "course_image_id": instance.course_image.id,
             "title": instance.course_image.title,
             "description": instance.course_image.description,
             "original_file_name": instance.course_image.original_file_name,
@@ -75,13 +77,13 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         data = super(CollectionSerializer, self).to_representation(instance)
         data['type'] = 'collections'
         collection_images = [x for x in self._collection_images if x.collection.pk == instance.pk]
-        data['image_ids'] = [x.course_image.pk for x in collection_images]
+        data['course_image_ids'] = [x.course_image.pk for x in collection_images]
         return data
 
 class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
+    url = serializers.HyperlinkedIdentityField(view_name="courseimage-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
-    upload_url = serializers.HyperlinkedIdentityField(view_name="image-upload", lookup_field="pk")
+    upload_url = serializers.HyperlinkedIdentityField(view_name="courseimage-upload", lookup_field="pk")
 
     class Meta:
         model = CourseImage
@@ -101,7 +103,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
 
     def to_representation(self, instance):
         data =  super(CourseImageSerializer, self).to_representation(instance)
-        data['type'] = 'images'
+        data['type'] = 'course-images'
         if instance.media_store is None:
             data.update({"image_uploaded": False})
         else:

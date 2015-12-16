@@ -16,7 +16,7 @@ class APIRoot(APIView):
         return Response({
             'courses': reverse('course-list', request=request, format=format),
             'collections': reverse('collection-list', request=request, format=format),
-            'images': reverse('image-list', request=request, format=format),
+            'course-images': reverse('courseimage-list', request=request, format=format),
         })
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -119,6 +119,11 @@ class CollectionImagesListView(APIView):
 
 class CollectionImagesDetailView(APIView):
     serializer_class = CollectionImageSerializer
+    def get(self, request, pk=None, format=None):
+         collection_image = get_object_or_404(CollectionImage, pk=pk)
+         serializer = CollectionImageSerializer(collection_image, context={'request': request})
+         return Response(serializer.data)
+    
     def delete(self, request, pk=None, format=None):
         collection_image = get_object_or_404(CollectionImage, pk=pk)
         collection_image.delete()
