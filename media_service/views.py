@@ -28,8 +28,11 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = CourseSerializer(courses, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def retrieve(self, request, pk=None, format=None):
-        course = get_object_or_404(Course, pk=pk)
+    def retrieve(self, request, lti_context=None, pk=None, format=None):
+        if lti_context is None:
+            course = get_object_or_404(Course, pk=pk)
+        else:
+            course = get_object_or_404(Course, lti_context_id=pk)
         serializer = CourseSerializerWithRelated(course, context={'request': request})
         return Response(serializer.data)
 
@@ -65,6 +68,7 @@ class CourseCollectionsView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CourseImagesView(APIView):
+    serializer_class = CourseImageSerializer
     def get(self, request, pk=None, format=None):
         images = CourseImage.get_course_images(pk)
         serializer = CourseImageSerializer(images, many=True, context={'request': request})
@@ -81,6 +85,7 @@ class CourseImagesView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CollectionImagesView(APIView):
+    serializer_class = CollectionSerializer
     def get(self, request, pk=None, format=None):
         images = CollectionImage.get_collection_images(pk)
         serializer = CollectionSerializerWithRelated(images, many=True, context={'request': request})
