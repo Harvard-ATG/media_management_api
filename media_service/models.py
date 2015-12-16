@@ -113,7 +113,7 @@ class Collection(BaseModel, SortOrderModelMixin):
 
 class CollectionImage(BaseModel, SortOrderModelMixin):
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='images')
-    course_image = models.ForeignKey(CourseImage, on_delete=models.CASCADE)
+    course_image = models.ForeignKey(CourseImage, on_delete=models.CASCADE, related_name='collections')
     sort_order = models.IntegerField(default=0)
 
     class Meta:
@@ -123,10 +123,10 @@ class CollectionImage(BaseModel, SortOrderModelMixin):
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"collection__pk": self.collection.pk})
-        super(CollectionItem, self).save(*args, **kwargs)
+        super(CollectionImage, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return "{0}:{1}".format(self.id, self.title)
+        return "{0}".format(self.id)
 
     @classmethod
     def get_collection_images(cls, collection_pk):

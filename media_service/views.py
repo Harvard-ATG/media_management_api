@@ -29,6 +29,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def retrieve(self, request, lti_context=None, pk=None, format=None):
+        print "lit_context = %s pk = %s" % (lti_context, pk)
         if lti_context is None:
             course = get_object_or_404(Course, pk=pk)
         else:
@@ -54,13 +55,24 @@ class ImageViewSet(viewsets.ModelViewSet):
     queryset = CourseImage.objects.all()
     serializer_class = CourseImageSerializer
 
+def get_course_pk(lti_context, pk):
+    if lti_context is None:
+        course_pk = pk
+    else:
+        course = get_object_or_404(Course, lti_context_id=pk)
+        course_pk = course.pk
+    return course_pk
+
 class CourseCollectionsView(APIView):
-    def get(self, request, pk=None, format=None):
-        collections = Collection.get_course_collections(pk)
+    serializer_class = CollectionSerializer
+    def get(self, request, lti_context=None, pk=None, format=None):
+        course_pk = get_course_pk(lti_context, pk)
+        collections = Collection.get_course_collections(course_pk)
         serializer = CollectionSerializerWithRelated(collections, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def post(self, request, pk=None, format=None):
+    def post(self, request, lti_context=None, pk=None, format=None):
+        course_pk = get_course_pk(lti_context, pk)
         serializer = CollectionSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -69,14 +81,16 @@ class CourseCollectionsView(APIView):
 
 class CourseImagesView(APIView):
     serializer_class = CourseImageSerializer
-    def get(self, request, pk=None, format=None):
-        images = CourseImage.get_course_images(pk)
+    def get(self, request, lti_context=None, pk=None, format=None):
+        course_pk = get_course_pk(lti_context, pk)
+        images = CourseImage.get_course_images(course_pk)
         serializer = CourseImageSerializer(images, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def post(self, request, pk=None, format=None):
-        data = request.data.copy()
+    def post(self, request, lti_context=None, pk=None, format=None):
+        course_pk = get_course_pk(lti_context, pk)
         course = get_object_or_404(Course, pk=pk)
+        data = request.data.copy()
         data['course'] = course.pk
         serializer = CreateCourseImageSerializer(data=data)
         if serializer.is_valid():
@@ -85,14 +99,22 @@ class CourseImagesView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CollectionImagesView(APIView):
-    serializer_class = CollectionSerializer
+    serializer_class = CollectionImageSerializer
     def get(self, request, pk=None, format=None):
-        images = CollectionImage.get_collection_images(pk)
-        serializer = CollectionSerializerWithRelated(images, many=True, context={'request': request})
+        collection_images = CollectionImage.get_collection_images(pk)
+        serializer = CollectionImageSerializer(collection_images, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
-        return Response({'error': 'not implemented'})
+        from django.forms.models import model_to_dict
+        collection = get_object_or_404(Collection, pk=pk)
+        data = request.data.copy()
+        data['collection_id'] = collection.pk
+        serializer = CollectionImageSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ImageUploadView(APIView):
     def post(self, request, pk=None, format=None):

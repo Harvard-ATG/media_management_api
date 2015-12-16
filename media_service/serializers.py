@@ -8,17 +8,29 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'username', 'email', 'groups')
 
 class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
+    collection_id = serializers.PrimaryKeyRelatedField(queryset=Collection.objects.all())
+    collection_url = serializers.HyperlinkedIdentityField(view_name="collection-detail", lookup_field="pk")
+    course_image_id = serializers.PrimaryKeyRelatedField(queryset=CourseImage.objects.all())
     class Meta:
         model = CollectionImage
-        fields = ('url', 'id', 'course_image', 'sort_order', 'created', 'updated')
+        fields = ('id', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
+
+    def create(self, validated_data):
+        collection_image = CollectionImage(
+            collection=validated_data['collection_id'],
+            course_image=validated_data['course_image_id'],
+        )
+        collection_image.save()
+        return collection_image
 
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
-    course_id = serializers.IntegerField(source="course.pk")
+    course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     course_url = serializers.HyperlinkedIdentityField(view_name="course-detail", lookup_field="pk")
     images_url = serializers.HyperlinkedIdentityField(view_name="collection-images", lookup_field="pk")
+    images = CollectionImageSerializer(many=True, read_only=True)
     class Meta:
         model = Collection
-        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course_url', 'course_id', 'images_url', 'created', 'updated')
+        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course_url', 'course_id', 'images_url', 'images', 'created', 'updated')
 
 class CollectionSerializerWithRelated(CollectionSerializer):
     images = CollectionImageSerializer(many=True, read_only=True)
@@ -28,20 +40,23 @@ class CollectionSerializerWithRelated(CollectionSerializer):
 
 class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
+    course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     course_url = serializers.HyperlinkedIdentityField(view_name="course-detail", lookup_field="pk")
     upload_url = serializers.HyperlinkedIdentityField(view_name="image-upload", lookup_field="pk")
+
     class Meta:
         model = CourseImage
-        fields = ('url', 'course_url', 'upload_url', 'id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
+        fields = ('url', 'course_url', 'upload_url', 'id', 'course_id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
 
 class CreateCourseImageSerializer(serializers.ModelSerializer):
+    course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     class Meta:
         model = CourseImage
-        fields = ('id', 'title', 'course', 'description')
+        fields = ('id', 'title', 'course_id', 'description')
     
     def create(self, validated_data):
         course_image = CourseImage(
-            course=validated_data['course'],
+            course=validated_data['course_id'],
             title=validated_data['title'],
             description=validated_data['description']
         )
