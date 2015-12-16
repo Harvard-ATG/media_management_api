@@ -38,7 +38,10 @@ class MediaStore(BaseModel):
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.file_name)
-
+    
+    def get_image_server_url(self):
+        return 'http://localhost:8000/loris-image-server/%s' % self.pk
+    
 class UserProfile(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     lti_user_id = models.CharField(max_length=1024, unique=True, blank=True)
@@ -82,6 +85,7 @@ class CourseImage(BaseModel, SortOrderModelMixin):
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
+    
 
     @classmethod
     def get_course_images(cls, course_pk):
