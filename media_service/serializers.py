@@ -73,6 +73,15 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
 
         self._collection_images = list(CollectionImage.objects.all())
 
+    def create(self, validated_data):
+        collection = Collection(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            course=validated_data['course_id'],
+        )
+        collection.save()
+        return collection
+
     def to_representation(self, instance):
         data = super(CollectionSerializer, self).to_representation(instance)
         data['type'] = 'collections'
