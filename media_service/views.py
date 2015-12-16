@@ -80,10 +80,6 @@ class CourseImagesView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def put(self, request, pk=None, format=None):
-        # TODO -- Handles uploading of image
-        return Response({'error': 'not implemented'})
-
 class CollectionImagesView(APIView):
     def get(self, request, pk=None, format=None):
         images = CollectionImage.get_collection_images(pk)
@@ -93,5 +89,10 @@ class CollectionImagesView(APIView):
     def post(self, request, pk=None, format=None):
         return Response({'error': 'not implemented'})
 
+class ImageUploadView(APIView):
+    def post(self, request, pk=None, format=None):
+        return Response({'error': 'not implemented'})
+
     def put(self, request, pk=None, format=None):
         return Response({'error': 'not implemented'})
+    

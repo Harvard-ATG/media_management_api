@@ -29,9 +29,10 @@ class CollectionSerializerWithRelated(CollectionSerializer):
 class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
     course_url = serializers.HyperlinkedIdentityField(view_name="course-detail", lookup_field="pk")
+    upload_url = serializers.HyperlinkedIdentityField(view_name="image-upload", lookup_field="pk")
     class Meta:
         model = CourseImage
-        fields = ('url', 'course_url', 'id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
+        fields = ('url', 'course_url', 'upload_url', 'id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
 
 class CreateCourseImageSerializer(serializers.ModelSerializer):
     class Meta:
