@@ -8,6 +8,7 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 """
 
 import os
+import sys
 import logging
 from .secure import SECURE_SETTINGS
 
@@ -185,6 +186,12 @@ LOGGING = {
             'formatter': 'verbose',
             'filename': os.path.join(_LOG_ROOT, 'django-media_management_api.log'),
         },
+        'console': {
+            'level' : 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'simple'
+        },
     },
     # This is the default logger for any apps or libraries that use the logger
     # package, but are not represented in the `loggers` dict below.  A level
@@ -205,6 +212,16 @@ LOGGING = {
         # },
         # Make sure that propagate is False so that the root logger doesn't get involved
         # after an app logger handles a log message.
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.db': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        }
     },
 }
 

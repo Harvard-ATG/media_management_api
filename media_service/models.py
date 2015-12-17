@@ -27,6 +27,7 @@ class MediaStore(BaseModel):
     file_name = models.CharField(max_length=1024, null=False)
     file_size = models.PositiveIntegerField(null=False)
     file_md5hash = models.CharField(max_length=32, null=False)
+    file_type = models.CharField(max_length=512, null=True)
     img_type = models.CharField(max_length=128, null=True)
     img_width = models.PositiveIntegerField(null=True)
     img_height = models.PositiveIntegerField(null=True)

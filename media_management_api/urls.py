@@ -1,5 +1,6 @@
 from django.conf.urls import url, include
 from django.contrib import admin
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.urlpatterns import format_suffix_patterns
 from media_service import views
 
@@ -43,7 +44,7 @@ urlpatterns = [
     url(r'^courses/$', course_list, name='course-list'),
     url(r'^courses/(?P<lti_context>lti/)?(?P<pk>[^/.]+)/$', course_detail, name='course-detail'),
     url(r'^courses/(?P<lti_context>lti/)?(?P<pk>[^/.]+)/collections/$', views.CourseCollectionsView.as_view(), name='course-collections'),
-    url(r'^courses/(?P<lti_context>lti/)?(?P<pk>[^/.]+)/images/$', views.CourseImagesListView.as_view(), name='courseimages-list'),
+    url(r'^courses/(?P<lti_context>lti/)?(?P<pk>[^/.]+)/images/$', csrf_exempt(views.CourseImagesListView.as_view()), name='courseimages-list'),
     url(r'^collections/$', collection_list, name='collection-list'),
     url(r'^collections/(?P<pk>[^/.]+)/$', collection_detail, name='collection-detail'),
     url(r'^collections/(?P<pk>[^/.]+)/images/$', views.CollectionImagesListView.as_view(), name='collectionimages-list'),

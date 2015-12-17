@@ -2,6 +2,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionImage, CourseImage
+from media_service.mediastore import MediaStoreUpload
 
 def course_image_to_representation(course_image):
     if course_image.media_store is None:
@@ -119,12 +120,22 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
         super(CourseImageSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
+        request = self.context['request']
+        media_store_instance = None
+        
+        if 'upload' in request.FILES:
+            media_store_upload = MediaStoreUpload(file=request.FILES['upload'])
+            if media_store_upload.is_valid():
+                media_store_instance = media_store_upload.save()
+
         course_image = CourseImage(
             course=validated_data['course_id'],
             title=validated_data['title'],
-            description=validated_data.get('description', '')
+            description=validated_data.get('description', ''),
+            media_store=media_store_instance,
         )
         course_image.save()
+
         return course_image
 
     def to_representation(self, instance):

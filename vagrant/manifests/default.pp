@@ -94,7 +94,10 @@ package {'zlib1g-dev':
     ensure => latest,
     require => Exec['apt-get-update'],
 }
-
+package {'libjpeg8-dev':
+    ensure => latest,
+    require => Exec['apt-get-update'],
+}
 package {'libsqlite3-dev':
     ensure => latest,
     require => Exec['apt-get-update'],

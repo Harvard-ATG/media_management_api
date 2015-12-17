@@ -10,3 +10,4 @@ markdown==2.6.5
 django-filter==0.11.0
 django-cors-headers==0.11
 boto==2.38.0
+pillow==3.0.0
