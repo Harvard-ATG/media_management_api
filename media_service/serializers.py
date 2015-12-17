@@ -3,12 +3,12 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionImage, CourseImage
 
-def media_store_to_representation(media_store_instance):
+def media_store_to_representation(media_store):
     data = {
         "image_type": media_store.file_type,
         "image_width": media_store.img_width,
         "image_height": media_store.img_width,
-        "original_url": None,
+        "image_url": None,
         "thumb_url": None,
         "thumb_width": None,
         "thumb_height": None,
@@ -39,21 +39,20 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
 
     def to_representation(self, instance):
         data =  super(CollectionImageSerializer, self).to_representation(instance)
-        data['type'] = 'collectionimages'
         data.update({
+            "type": 'collectionimages',
             "url": reverse('collectionimages-detail', kwargs={'pk': instance.pk}, request=self.context['request']),
             "course_image_id": instance.course_image.id,
             "title": instance.course_image.title,
             "description": instance.course_image.description,
             "original_file_name": instance.course_image.original_file_name,
         })
-
+        course_image = instance.course_image
+        data.update({"is_upload": course_image.is_upload})
         if instance.course_image.media_store is None:
-            data.update({"image_uploaded": False})
+            data.update({"image_url": instance.file_url})
         else:
-            media_store = instance.course_image.media_store
-            data.update({"image_uploaded": True})
-            data.update(media_store_to_representation(media_store))
+            data.update(media_store_to_representation(course_image.media_store))
         return data
 
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
@@ -112,13 +111,14 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
 
     def to_representation(self, instance):
         data =  super(CourseImageSerializer, self).to_representation(instance)
-        data['type'] = 'course-images'
+        data.update({
+            "type": "courseimages",
+            "is_upload": instance.is_upload,
+        })
         if instance.media_store is None:
-            data.update({"image_uploaded": False})
+            data.update({"image_url": instance.file_url})
         else:
-            media_store = instance.media_store
-            data.update({"image_uploaded": True})
-            data.update(media_store_to_representation(media_store))
+            data.update(media_store_to_representation(instance.media_store))
         return data
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):

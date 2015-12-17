@@ -68,6 +68,8 @@ class Course(BaseModel):
 class CourseImage(BaseModel, SortOrderModelMixin):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='images')
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
+    is_upload = models.BooleanField(default=True, null=False)
+    file_url = models.CharField(max_length=4096, null=True)
     original_file_name = models.CharField(max_length=4096, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)

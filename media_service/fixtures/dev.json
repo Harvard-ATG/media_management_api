@@ -75,5 +75,103 @@
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 1,
+  "fields": {
+    "course": 1,
+    "title": "One Image",
+    "is_upload": false,
+    "file_url": "http://dummyimage.com/600x400/000/fff.jpg&text=A",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 2,
+  "fields": {
+    "course": 1,
+    "title": "Two Image",
+    "is_upload": false,
+    "file_url": "http://dummyimage.com/600x400/000/0f0.jpg&text=B",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 3,
+  "fields": {
+    "course": 1,
+    "title": "Three Image",
+    "is_upload": false,
+    "file_url": "http://dummyimage.com/600x400/000/00f.jpg&text=C",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 4,
+  "fields": {
+    "course": 1,
+    "title": "Four Image",
+    "is_upload": false,
+    "file_url": "http://dummyimage.com/600x400/000/ff0.jpg&text=D",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 1,
+  "fields": {
+    "collection": 1,
+    "course_image": 1,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 2,
+  "fields": {
+    "collection": 1,
+    "course_image": 4,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 3,
+  "fields": {
+    "collection": 2,
+    "course_image": 2,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 4,
+  "fields": {
+    "collection": 2,
+    "course_image": 3,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 5,
+  "fields": {
+    "collection": 3,
+    "course_image": 4,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
 }
 ]
