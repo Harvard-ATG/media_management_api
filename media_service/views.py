@@ -114,9 +114,12 @@ class CollectionImagesListView(APIView):
 
     def post(self, request, pk=None, format=None):
         collection = get_object_or_404(Collection, pk=pk)
-        data = request.data.copy()
-        data['collection_id'] = collection.pk
-        serializer = CollectionImageSerializer(data=data, context={'request': request})
+        data = []
+        for collection_image in request.data:
+            item = collection_image.copy()
+            item['collection_id'] = collection.pk
+            data.append(item)
+        serializer = CollectionImageSerializer(data=data, many=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

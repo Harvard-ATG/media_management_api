@@ -46,6 +46,9 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
         model = CollectionImage
         fields = ('id', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
 
+    def __init__(self, *args, **kwargs):
+        super(CollectionImageSerializer, self).__init__(*args, **kwargs)
+
     def create(self, validated_data):
         collection_image = CollectionImage(
             collection=validated_data['collection_id'],
