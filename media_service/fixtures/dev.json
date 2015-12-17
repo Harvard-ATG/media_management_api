@@ -1,0 +1,196 @@
+[
+{
+  "model": "media_service.course",
+  "pk": 1,
+  "fields": {
+    "title": "Arthur's Demo Course",
+    "lti_context_id": "2a8b2d3fa51ea413d19e480fb6c2eb085b7866a9",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.course",
+  "pk": 2,
+  "fields": {
+    "title": "Jazahn's Demo Course",
+    "lti_context_id": "01cc622dbb0d57a76ea5f0caa20a63cf8685e1ef",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.course",
+  "pk": 3,
+  "fields": {
+    "title": "MATH 23A: Linear Algebra and Real Analysis I",
+    "lti_context_id": "0f51be9dd2bf866dfbccbc0aa420e57027c63608",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.course",
+  "pk": 4,
+  "fields": {
+    "title": "VIETNAM BA: Elementary Vietnamese",
+    "lti_context_id": "e74c7d920cb4b86aa56138de490abc6c17583460",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 1,
+  "fields": {
+    "title": "Scrambled Eggs Super!",
+    "course": 1,
+    "sort_order": 1,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 2,
+  "fields": {
+    "title": "If I Ran the Circus",
+    "course": 1,
+    "sort_order": 2,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 3,
+  "fields": {
+    "title": "How the Grinch Stole Christmas!",
+    "course": 1,
+    "sort_order": 3,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 4,
+  "fields": {
+    "title": "Testing 1...2..3...",
+    "course": 2,
+    "sort_order": 1,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 1,
+  "fields": {
+    "course": 1,
+    "title": "One Image",
+    "is_upload": false,
+    "img_url": "http://dummyimage.com/600x400/000/fff.jpg&text=A",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 2,
+  "fields": {
+    "course": 1,
+    "title": "Two Image",
+    "is_upload": false,
+    "img_url": "http://dummyimage.com/600x400/000/0f0.jpg&text=B",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 3,
+  "fields": {
+    "course": 1,
+    "title": "Three Image",
+    "is_upload": false,
+    "img_url": "http://dummyimage.com/600x400/000/00f.jpg&text=C",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 4,
+  "fields": {
+    "course": 1,
+    "title": "Four Image",
+    "is_upload": false,
+    "img_url": "http://dummyimage.com/600x400/000/ff0.jpg&text=D",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 5,
+  "fields": {
+    "course": 1,
+    "media_store": null,
+    "title": "Uploaded Image",
+    "is_upload": true,
+    "img_url": "http://dummyimage.com/2560x1440/000/fff.jpg&text=Example+Image+Upload",
+    "img_type": "jpg",
+    "img_width": 2560,
+    "img_height": 1440,
+    "thumb_url": "http://dummyimage.com/256x144/000/fff.jpg&text=Example+Image+Upload",
+    "thumb_width": 256,
+    "thumb_height": 144,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 1,
+  "fields": {
+    "collection": 1,
+    "course_image": 1,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 2,
+  "fields": {
+    "collection": 1,
+    "course_image": 4,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 3,
+  "fields": {
+    "collection": 2,
+    "course_image": 2,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 4,
+  "fields": {
+    "collection": 2,
+    "course_image": 3,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.collectionimage",
+  "pk": 5,
+  "fields": {
+    "collection": 3,
+    "course_image": 4,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+}
+]
