@@ -62,7 +62,7 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
             "course_image_id": instance.course_image.id,
             "title": instance.course_image.title,
             "description": instance.course_image.description,
-            "original_file_name": instance.course_image.original_file_name,
+            "upload_file_name": instance.course_image.upload_file_name,
             "is_upload": instance.course_image.is_upload,
         })
         data.update(course_image_to_representation(instance.course_image))
