@@ -209,3 +209,14 @@ LOGGING = {
 }
 
 # Other project specific settings
+
+# AWS Settings
+# Used to store media files in an S3 bucket.
+#   - AWS_ACCESS_KEY_ID: AWS access credentials: the access key
+#   - AWS_ACCESS_SECRET_KEY: AWS access credentials: the secret access key
+#   - AWS_S3_BUCKET: the name of the bucket where media is stored
+#   - AWS_S3_KEY_PREFIX: required to partition items across environments (i.e. dev, stage, qa, etc)
+AWS_ACCESS_KEY_ID = SECURE_SETTINGS["aws_access_key_id"]
+AWS_ACCESS_SECRET_KEY = SECURE_SETTINGS["aws_access_secret_key"]
+AWS_S3_BUCKET = SECURE_SETTINGS["aws_s3_bucket"]
+AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
