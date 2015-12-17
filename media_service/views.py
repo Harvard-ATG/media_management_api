@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
 from media_service.models import Course, Collection, CourseImage, MediaStore, CollectionImage
 from media_service.serializers import UserSerializer, CourseSerializer, CourseImageSerializer, \
     CollectionSerializer, CollectionImageSerializer
@@ -86,6 +87,7 @@ class CourseCollectionsView(APIView):
 
 class CourseImagesListView(APIView):
     serializer_class = CourseImageSerializer
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
     def get(self, request, lti_context=None, pk=None, format=None):
         course_pk = get_course_pk(lti_context, pk)
         images = CourseImage.get_course_images(course_pk)
@@ -133,6 +135,7 @@ class CollectionImagesDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class ImageUploadView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
     def post(self, request, pk=None, format=None):
         return Response({'error': 'not implemented'})
 

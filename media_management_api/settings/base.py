@@ -91,6 +91,12 @@ DATABASES = {
     },
 }
 
+# File uploads
+FILE_UPLOAD_HANDLERS = [
+    "django.core.files.uploadhandler.MemoryFileUploadHandler",
+    "django.core.files.uploadhandler.TemporaryFileUploadHandler"
+ ]
+
 # Sessions
 # https://docs.djangoproject.com/en/1.8/topics/http/sessions/#module-django.contrib.sessions
 
