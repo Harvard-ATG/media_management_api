@@ -83,7 +83,7 @@
     "course": 1,
     "title": "One Image",
     "is_upload": false,
-    "file_url": "http://dummyimage.com/600x400/000/fff.jpg&text=A",
+    "img_url": "http://dummyimage.com/600x400/000/fff.jpg&text=A",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -95,7 +95,7 @@
     "course": 1,
     "title": "Two Image",
     "is_upload": false,
-    "file_url": "http://dummyimage.com/600x400/000/0f0.jpg&text=B",
+    "img_url": "http://dummyimage.com/600x400/000/0f0.jpg&text=B",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -107,7 +107,7 @@
     "course": 1,
     "title": "Three Image",
     "is_upload": false,
-    "file_url": "http://dummyimage.com/600x400/000/00f.jpg&text=C",
+    "img_url": "http://dummyimage.com/600x400/000/00f.jpg&text=C",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -119,7 +119,26 @@
     "course": 1,
     "title": "Four Image",
     "is_upload": false,
-    "file_url": "http://dummyimage.com/600x400/000/ff0.jpg&text=D",
+    "img_url": "http://dummyimage.com/600x400/000/ff0.jpg&text=D",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseimage",
+  "pk": 5,
+  "fields": {
+    "course": 1,
+    "media_store": null,
+    "title": "Uploaded Image",
+    "is_upload": true,
+    "img_url": "http://dummyimage.com/2560x1440/000/fff.jpg&text=Example+Image+Upload",
+    "img_type": "jpg",
+    "img_width": 2560,
+    "img_height": 1440,
+    "thumb_url": "http://dummyimage.com/256x144/000/fff.jpg&text=Example+Image+Upload",
+    "thumb_width": 256,
+    "thumb_height": 144,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }

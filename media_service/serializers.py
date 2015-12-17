@@ -3,15 +3,32 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionImage, CourseImage
 
-def media_store_to_representation(media_store):
+def course_image_to_representation(course_image):
+    if course_image.media_store is None:
+        image_type = course_image.img_type
+        image_url = course_image.img_url
+        image_width = course_image.img_width
+        image_height = course_image.img_height
+        thumb_url = course_image.thumb_url
+        thumb_width = course_image.thumb_width
+        thumb_height = course_image.thumb_height
+    else:
+        media_store = course_image.media_store
+        image_type = media_store.img_type
+        image_url = None
+        image_width = media_store.img_width
+        image_height = media_store.img_height
+        thumb_url = None
+        thumb_width = None
+        thumb_height = None
     data = {
-        "image_type": media_store.file_type,
-        "image_width": media_store.img_width,
-        "image_height": media_store.img_width,
-        "image_url": None,
-        "thumb_url": None,
-        "thumb_width": None,
-        "thumb_height": None,
+        "image_type": image_type,
+        "image_width": image_width,
+        "image_height": image_height,
+        "image_url": image_url,
+        "thumb_url": thumb_url,
+        "thumb_width": thumb_width,
+        "thumb_height": thumb_height,
     }
     return data
 
@@ -46,13 +63,9 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
             "title": instance.course_image.title,
             "description": instance.course_image.description,
             "original_file_name": instance.course_image.original_file_name,
+            "is_upload": instance.course_image.is_upload,
         })
-        course_image = instance.course_image
-        data.update({"is_upload": course_image.is_upload})
-        if instance.course_image.media_store is None:
-            data.update({"image_url": instance.file_url})
-        else:
-            data.update(media_store_to_representation(course_image.media_store))
+        data.update(course_image_to_representation(instance.course_image))
         return data
 
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
@@ -95,7 +108,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = CourseImage
-        fields = ('url', 'upload_url', 'id', 'course_id', 'title', 'description', 'sort_order', 'original_file_name', 'created', 'updated')
+        fields = ('url', 'upload_url', 'id', 'course_id', 'title', 'description', 'sort_order', 'upload_file_name', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
         super(CourseImageSerializer, self).__init__(*args, **kwargs)
@@ -115,10 +128,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
             "type": "courseimages",
             "is_upload": instance.is_upload,
         })
-        if instance.media_store is None:
-            data.update({"image_url": instance.file_url})
-        else:
-            data.update(media_store_to_representation(instance.media_store))
+        data.update(course_image_to_representation(instance))
         return data
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
