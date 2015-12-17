@@ -118,6 +118,7 @@ class CollectionImagesListView(APIView):
         for collection_image in request.data:
             item = collection_image.copy()
             item['collection_id'] = collection.pk
+            data.append(item)
         serializer = CollectionImageSerializer(data=data, many=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
