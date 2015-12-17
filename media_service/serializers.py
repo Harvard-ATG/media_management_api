@@ -71,6 +71,7 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     images_url = serializers.HyperlinkedIdentityField(view_name="collectionimages-list", lookup_field="pk")
+    description = serializers.CharField(max_length=None, required=False)
 
     class Meta:
         model = Collection
@@ -88,8 +89,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         collection = Collection(
             title=validated_data['title'],
-            description=validated_data['description'],
             course=validated_data['course_id'],
+            description=validated_data.get('description', ''),
         )
         collection.save()
         return collection
@@ -105,6 +106,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="courseimage-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     upload_url = serializers.HyperlinkedIdentityField(view_name="courseimage-upload", lookup_field="pk")
+    description = serializers.CharField(max_length=None, required=False)
 
     class Meta:
         model = CourseImage
@@ -117,7 +119,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
         course_image = CourseImage(
             course=validated_data['course_id'],
             title=validated_data['title'],
-            description=validated_data['description']
+            description=validated_data.get('description', '')
         )
         course_image.save()
         return course_image

@@ -75,7 +75,10 @@ class CourseCollectionsView(APIView):
 
     def post(self, request, lti_context=None, pk=None, format=None):
         course_pk = get_course_pk(lti_context, pk)
-        serializer = CollectionSerializer(data=request.data, context={'request': request})
+        data = request.data.copy()
+        course = get_object_or_404(Course, pk=pk)
+        data['course_id'] = course.pk
+        serializer = CollectionSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -93,7 +96,7 @@ class CourseImagesListView(APIView):
         course_pk = get_course_pk(lti_context, pk)
         course = get_object_or_404(Course, pk=pk)
         data = request.data.copy()
-        data['course'] = course.pk
+        data['course_id'] = course.pk
         serializer = CourseImageSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
