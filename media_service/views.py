@@ -139,7 +139,8 @@ class CourseImageUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     def post(self, request, pk=None, format=None):
         instance = get_object_or_404(CourseImage, pk=pk)
-        data = request.data
+        data = request.data.copy()
+        data['course_id'] = instance.course.pk
         serializer = CourseImageSerializer(data=data, instance=instance, context={'request': request})
         if serializer.is_valid():
             serializer.save()
