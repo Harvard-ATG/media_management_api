@@ -1,6 +1,9 @@
 from django.db import models
 from django.db.models import Max
 from django.conf import settings
+import urllib
+
+IIIF_IMAGE_SERVER_URL = settings.IIIF_IMAGE_SERVER_URL
 
 class BaseModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -27,8 +30,8 @@ class MediaStore(BaseModel):
     file_name = models.CharField(max_length=1024, null=False)
     file_size = models.PositiveIntegerField(null=False)
     file_md5hash = models.CharField(max_length=32, null=False)
+    file_extension = models.CharField(max_length=6, null=True)
     file_type = models.CharField(max_length=512, null=True)
-    img_type = models.CharField(max_length=128, null=True)
     img_width = models.PositiveIntegerField(null=True)
     img_height = models.PositiveIntegerField(null=True)
     reference_count = models.PositiveIntegerField(default=0)
@@ -39,10 +42,54 @@ class MediaStore(BaseModel):
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.file_name)
+
+    def get_image_full(self):
+        w, h = (self.img_width, self.img_height)
+        url = MediaStore.make_iiif_image_server_url({
+            "identifier": self.get_iiif_identifier(),
+            "region": "full",
+            "size": "full",
+            "rotation": 0,
+            "quality": "default",
+            "format": self.file_extension,
+        })
+        full = {"width": w, "height": h, "url": url}
+        return full
+
+    def get_image_thumb(self):
+        w, h = (self.img_width, self.img_height)
+        if h > 200:
+            thumb_h = 200
+            thumb_w = int((float(w) / h) * thumb_h)
+        else:
+            thumb_h = h
+            thumb_w = w
+        url = MediaStore.make_iiif_image_server_url({
+            "identifier": self.get_iiif_identifier(),
+            "region": "full",
+            "size": "{thumb_w},{thumb_h}".format(thumb_w=thumb_w, thumb_h=thumb_h),
+            "rotation": 0,
+            "quality": "default",
+            "format": self.file_extension,
+        })
+        thumb = {"width": thumb_w, "height": thumb_h, "url": url}
+        return thumb
     
-    def get_image_server_url(self):
-        return 'http://localhost:8000/loris-image-server/%s' % self.pk
-    
+    def get_iiif_identifier(self, url_encode_identifier=True):
+        identifier = "images/{pk}/{file_name}".format(pk=self.pk, file_name=self.file_name)
+        if url_encode_identifier:
+            identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
+        return identifier
+
+    @classmethod
+    def make_iiif_image_server_url(cls, iiif_spec):
+        required_spec = ('identifier', 'region', 'size', 'rotation', 'quality', 'format')
+        for k in iiif_spec.keys():
+            if k not in required_spec:
+                raise Exception("Error making IIIF image server URL. Missing '%s'. Given spec: %s" % (k, iiif_spec))
+        url_format_str = '{base_url}{identifier}/{region}/{size}/{rotation}/{quality}.{format}'
+        return url_format_str.format(base_url=IIIF_IMAGE_SERVER_URL, **iiif_spec)
+
 class UserProfile(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     lti_user_id = models.CharField(max_length=1024, unique=True, blank=True)

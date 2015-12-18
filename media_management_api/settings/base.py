@@ -219,13 +219,16 @@ LOGGING = {
         },
         'django.db': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': True,
         }
     },
 }
 
 # Other project specific settings
+
+# IIIF settings
+IIIF_IMAGE_SERVER_URL = SECURE_SETTINGS.get('iiif_image_server_url', 'http://localhost:8000/loris/')
 
 # AWS Settings
 # Used to store media files in an S3 bucket.

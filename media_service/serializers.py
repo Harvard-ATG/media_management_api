@@ -15,22 +15,25 @@ def course_image_to_representation(course_image):
         thumb_height = course_image.thumb_height
     else:
         media_store = course_image.media_store
-        image_type = media_store.img_type
-        image_url = None
-        image_width = media_store.img_width
-        image_height = media_store.img_height
-        thumb_url = None
-        thumb_width = None
-        thumb_height = None
+        thumb = media_store.get_image_thumb()
+        full = media_store.get_image_full()
+        image_type = media_store.file_type
+        image_url = full['url']
+        image_width = full['width']
+        image_height = full['height']
+        thumb_url = thumb['url']
+        thumb_width = thumb['width']
+        thumb_height = thumb['height']
     data = {
         "image_type": image_type,
         "image_width": image_width,
         "image_height": image_height,
         "image_url": image_url,
-        "thumb_url": thumb_url,
         "thumb_width": thumb_width,
         "thumb_height": thumb_height,
+        "thumb_url": thumb_url,
     }
+    print "image_rep: %s" % data
     return data
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -122,18 +125,24 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         request = self.context['request']
         media_store_instance = None
-        
+        upload_file_name = None
+
         if 'upload' in request.FILES:
-            media_store_upload = MediaStoreUpload(file=request.FILES['upload'])
+            upload_file = request.FILES['upload']
+            upload_file_name = upload_file.name
+            media_store_upload = MediaStoreUpload(file=upload_file)
             if media_store_upload.is_valid():
                 media_store_instance = media_store_upload.save()
 
-        course_image = CourseImage(
-            course=validated_data['course_id'],
-            title=validated_data['title'],
-            description=validated_data.get('description', ''),
-            media_store=media_store_instance,
-        )
+        course_image_attrs = {
+            "course": validated_data['course_id'],
+            "title": validated_data['title'],
+            "description": validated_data.get('description', ''),
+            "media_store": media_store_instance,
+            "upload_file_name": upload_file_name,
+        }
+
+        course_image = CourseImage(**course_image_attrs)
         course_image.save()
 
         return course_image
