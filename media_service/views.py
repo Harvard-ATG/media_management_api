@@ -135,11 +135,14 @@ class CollectionImagesDetailView(APIView):
         collection_image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class ImageUploadView(APIView):
+class CourseImageUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     def post(self, request, pk=None, format=None):
-        return Response({'error': 'not implemented'})
-
-    def put(self, request, pk=None, format=None):
-        return Response({'error': 'not implemented'})
+        instance = get_object_or_404(CourseImage, pk=pk)
+        data = request.data
+        serializer = CourseImageSerializer(data=data, instance=instance, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     

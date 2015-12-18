@@ -123,28 +123,38 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        media_store_instance = None
-        upload_file_name = None
-
-        if 'upload' in request.FILES:
-            upload_file = request.FILES['upload']
-            upload_file_name = upload_file.name
-            media_store_upload = MediaStoreUpload(file=upload_file)
-            if media_store_upload.is_valid():
-                media_store_instance = media_store_upload.save()
-
+        result = self.handle_file_upload(request)
         course_image_attrs = {
             "course": validated_data['course_id'],
             "title": validated_data['title'],
             "description": validated_data.get('description', ''),
-            "media_store": media_store_instance,
-            "upload_file_name": upload_file_name,
+            "media_store": result['media_store'],
+            "upload_file_name": result['upload_file_name'],
         }
 
         course_image = CourseImage(**course_image_attrs)
         course_image.save()
 
         return course_image
+
+    def update(self, instance, validated_data):
+        request = self.context['request']
+        result = self.handle_file_upload(request)
+        instance.media_store = result['media_store']
+        instance.upload_file_name = result['upload_file_name']
+        instance.save()
+        return instance
+
+    def handle_file_upload(self, request):
+        result = {"is_upload": False, "media_store": None, "upload_file_name": None}
+        if 'upload' in request.FILES:
+            upload_file = request.FILES['upload']
+            result['upload_file_name'] = upload_file.name
+            result['is_upload'] = True
+            media_store_upload = MediaStoreUpload(file=upload_file)
+            if media_store_upload.is_valid():
+                result['media_store'] = media_store_upload.save()
+        return result
 
     def to_representation(self, instance):
         data =  super(CourseImageSerializer, self).to_representation(instance)

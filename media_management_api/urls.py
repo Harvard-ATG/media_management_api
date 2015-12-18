@@ -51,7 +51,7 @@ urlpatterns = [
     url(r'^collection-images/(?P<pk>[^/.]+)$', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
     url(r'^course-images$', image_list, name='courseimage-list'),
     url(r'^course-images/(?P<pk>[^/.]+)$', image_detail, name='courseimage-detail'),
-    url(r'^course-images/(?P<pk>[^/.]+)/upload$', views.ImageUploadView.as_view(), name='courseimage-upload'),
+    url(r'^course-images/(?P<pk>[^/.]+)/upload$', views.CourseImageUploadView.as_view(), name='courseimage-upload'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
