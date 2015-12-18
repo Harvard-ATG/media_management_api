@@ -146,7 +146,11 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
     def handle_file_upload(self, request):
-        result = {"is_upload": False, "media_store": None, "upload_file_name": None}
+        result = {
+            "is_upload": False,
+            "media_store": None,
+            "upload_file_name": None,
+        }
         if 'upload' in request.FILES:
             upload_file = request.FILES['upload']
             result['upload_file_name'] = upload_file.name

@@ -1,12 +1,13 @@
 import os
 import hashlib
 import tempfile
+import magic
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.db import transaction
-from media_service.models import MediaStore
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
+from media_service.models import MediaStore
 
 # Required AWS settings
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
@@ -85,7 +86,9 @@ class MediaStoreUpload:
         return self.file.size
 
     def getFileType(self):
-        return self.file.content_type
+        buf = self.file.chunks(1024).next()
+        file_type = magic.from_buffer(buf, mime=True)
+        return file_type
 
     def getFileExtension(self):
         name_parts = os.path.splitext(self.file.name)

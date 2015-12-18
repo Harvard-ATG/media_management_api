@@ -46,7 +46,7 @@ class MediaStore(BaseModel):
     def get_image_full(self):
         w, h = (self.img_width, self.img_height)
         url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(),
+            "identifier": self.get_iiif_identifier(encode=True),
             "region": "full",
             "size": "full",
             "rotation": 0,
@@ -65,7 +65,7 @@ class MediaStore(BaseModel):
             thumb_h = h
             thumb_w = w
         url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(),
+            "identifier": self.get_iiif_identifier(encode=True),
             "region": "full",
             "size": "{thumb_w},{thumb_h}".format(thumb_w=thumb_w, thumb_h=thumb_h),
             "rotation": 0,
@@ -75,9 +75,9 @@ class MediaStore(BaseModel):
         thumb = {"width": thumb_w, "height": thumb_h, "url": url}
         return thumb
     
-    def get_iiif_identifier(self, url_encode_identifier=True):
+    def get_iiif_identifier(self, encode=False):
         identifier = "images/{pk}/{file_name}".format(pk=self.pk, file_name=self.file_name)
-        if url_encode_identifier:
+        if encode:
             identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
         return identifier
 
