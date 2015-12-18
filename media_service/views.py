@@ -93,9 +93,6 @@ class CourseImagesListView(APIView):
         return Response(serializer.data)
 
     def post(self, request, lti_context=None, pk=None, format=None):
-        print "uploading image?"
-        print request.FILES
-        print request.data
         course_pk = get_course_pk(lti_context, pk)
         course = get_object_or_404(Course, pk=pk)
         data = request.data.copy()
