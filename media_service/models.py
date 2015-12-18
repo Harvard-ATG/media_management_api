@@ -137,7 +137,16 @@ class CourseImage(BaseModel, SortOrderModelMixin):
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
+        if self.media_store:
+            self.media_store.reference_count += 1
+            self.media_store.save() 
         super(CourseImage, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.media_store:
+            self.media_store.reference_count -= 1
+            self.media_store.save() 
+        super(CourseImage, self).delete(*args, **kwargs)
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
