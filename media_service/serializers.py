@@ -33,7 +33,6 @@ def course_image_to_representation(course_image):
         "thumb_height": thumb_height,
         "thumb_url": thumb_url,
     }
-    print "image_rep: %s" % data
     return data
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
