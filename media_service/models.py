@@ -3,7 +3,10 @@ from django.db.models import Max
 from django.conf import settings
 import urllib
 
+# Required settings
 IIIF_IMAGE_SERVER_URL = settings.IIIF_IMAGE_SERVER_URL
+AWS_S3_BUCKET = settings.AWS_S3_BUCKET
+AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
 
 class BaseModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -76,10 +79,17 @@ class MediaStore(BaseModel):
         return thumb
     
     def get_iiif_identifier(self, encode=False):
-        identifier = "images/{pk}/{file_name}".format(pk=self.pk, file_name=self.file_name)
+        identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
         if encode:
-            identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
+            identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!        
         return identifier
+
+    def get_s3_keyname(self):
+        return "{prefix}/images/{pk}/{file_name}".format(prefix=AWS_S3_KEY_PREFIX, pk=self.pk, file_name=self.file_name)
+
+    def get_s3_url(self):
+        '''Returns an absolute URL to the given item in the S3 bucket.'''
+        return "http://s3.amazonaws.com/%s/%s" % (AWS_S3_BUCKET, self.get_s3_keyname())
 
     @classmethod
     def make_iiif_image_server_url(cls, iiif_spec):

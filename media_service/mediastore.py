@@ -15,13 +15,6 @@ AWS_ACCESS_SECRET_KEY = settings.AWS_ACCESS_SECRET_KEY
 AWS_S3_BUCKET = settings.AWS_S3_BUCKET
 AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
 
-# Constants
-S3_IMAGES_KEY_FORMAT = "{key_prefix}/{identifier}"
-
-def get_s3_url(item_key):
-    '''Returns an absolute URL to the given item in the S3 bucket.'''
-    return "//s3.amazonaws.com/%s/%s" % (AWS_S3_BUCKET, item_key)
-
 class MediaStoreUploadException(Exception):
     pass
 
@@ -54,8 +47,6 @@ class MediaStoreUpload:
 
     def __init__(self, *args, **kwargs):
         self.file = kwargs.get('file', None) # Instance of Django's UploadedFile
-        self.key_prefix = AWS_S3_KEY_PREFIX # Prefix should specify the environment (i.e. dev, qa, etc)
-        self.key_format_str = S3_IMAGES_KEY_FORMAT # Used to format the S3 key 
         self.connection = S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
         self.bucket = self.connection.get_bucket(AWS_S3_BUCKET)
 
@@ -203,9 +194,7 @@ class MediaStoreUpload:
         '''
         if not self.instance:
             raise MediaStoreUploadException("MediaStore instance required to construct S3 key")
-        identifier = self.instance.get_iiif_identifier()
-        key_prefix = self.key_prefix
-        return self.key_format_str.format(key_prefix=key_prefix, identifier=identifier)
+        return self.instance.get_s3_keyname()
 
     def createFileName(self):
         '''
