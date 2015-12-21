@@ -10,4 +10,9 @@ SECURE_SETTINGS = {
     'db_default_name': 'media_management_api',
     'db_default_user': 'media_management_api',
     'db_default_password': 'media_management_api',
+    'db_default_password': '',
+    'aws_access_key_id': '',
+    'aws_access_secret_key': '',
+    'aws_s3_bucket': '', 
+    'aws_s3_key_prefix': 'local', # local-username|dev|qa|stage|production
 }
