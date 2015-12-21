@@ -8,6 +8,7 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 """
 
 import os
+import sys
 import logging
 from .secure import SECURE_SETTINGS
 
@@ -185,6 +186,12 @@ LOGGING = {
             'formatter': 'verbose',
             'filename': os.path.join(_LOG_ROOT, 'django-media_management_api.log'),
         },
+        'console': {
+            'level' : 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'simple'
+        },
     },
     # This is the default logger for any apps or libraries that use the logger
     # package, but are not represented in the `loggers` dict below.  A level
@@ -205,7 +212,31 @@ LOGGING = {
         # },
         # Make sure that propagate is False so that the root logger doesn't get involved
         # after an app logger handles a log message.
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.db': {
+            'handlers': ['console'],
+            'level': 'INFO', # Set to DEBUG to see SQL output
+            'propagate': True,
+        }
     },
 }
 
 # Other project specific settings
+
+# IIIF settings
+IIIF_IMAGE_SERVER_URL = SECURE_SETTINGS.get('iiif_image_server_url', 'http://localhost:8000/loris/')
+
+# AWS Settings
+# Used to store media files in an S3 bucket.
+#   - AWS_ACCESS_KEY_ID: AWS access credentials: the access key
+#   - AWS_ACCESS_SECRET_KEY: AWS access credentials: the secret access key
+#   - AWS_S3_BUCKET: the name of the bucket where media is stored
+#   - AWS_S3_KEY_PREFIX: required to partition items across environments (i.e. dev, stage, qa, etc)
+AWS_ACCESS_KEY_ID = SECURE_SETTINGS["aws_access_key_id"]
+AWS_ACCESS_SECRET_KEY = SECURE_SETTINGS["aws_access_secret_key"]
+AWS_S3_BUCKET = SECURE_SETTINGS["aws_s3_bucket"]
+AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
