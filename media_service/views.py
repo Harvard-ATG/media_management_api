@@ -65,11 +65,8 @@ be an empty list or a list with one object.
         serializer = CourseSerializer(courses, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def retrieve(self, request, lti_context=None, pk=None, format=None):
-        if lti_context is None:
-            course = get_object_or_404(Course, pk=pk)
-        else:
-            course = get_object_or_404(Course, lti_context_id=pk)
+    def retrieve(self, request, pk=None, format=None):
+        course = get_object_or_404(Course, pk=pk)
         include = ['images', 'collections']
         serializer = CourseSerializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
