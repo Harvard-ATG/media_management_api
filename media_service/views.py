@@ -9,7 +9,6 @@ from media_service.models import Course, Collection, CourseImage, MediaStore, Co
 from media_service.serializers import UserSerializer, CourseSerializer, CourseImageSerializer, \
     CollectionSerializer, CollectionImageSerializer
 
-
 class APIRoot(APIView):
     def get(self, request, format=None):
         return Response({
@@ -19,11 +18,50 @@ class APIRoot(APIView):
         })
 
 class CourseViewSet(viewsets.ModelViewSet):
+    '''
+A **course** resource contains a set of *images* which may be grouped into *collections*.
+
+Courses Endpoints
+----------------
+
+- `/courses`  Lists courses
+- `/courses/{pk}` Course detail
+- `/courses/{pk}/collections` Lists a course's collections
+- `/courses/{pk}/images`  Lists a course's images
+
+LTI Attributes
+--------------
+A course associated with an LTI context must have the following attributes at minimum:
+
+- `lti_context_id` Opaque identifier that uniquely identifies tool context (i.e. Canvas Course)
+- `lti_tool_consumer_instance_guid` DNS of the consumer instance that launched the tool
+
+Together, these two attributes should be unique. These attributes should be present in an
+LTI launch as `context_id` and `tool_consumer_instance_guid`.
+
+To search for a course associated with an LTI context:
+
+- `/courses?lti_context_id=<context_id>&lti_tool_consumer_instance_guid=<tool_consumer_instance_guid>`
+
+Since one and only one instance of a course can exist with those two attributes, the response should
+be an empty list or a list with one object.
+    '''
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     
+    def _get_lti_search_filters(self, request):
+        lti_search = {}
+        for k in ['lti_context_id', 'lti_tool_consumer_instance_guid']:
+            if k in request.GET:
+                lti_search[k] = request.GET[k]
+        return lti_search
+    
     def list(self, request, format=None):
-        courses = Course.objects.all()
+        lti_search = self._get_lti_search_filters(request)
+        if len(lti_search.keys()) > 0:
+            courses = Course.objects.filter(**lti_search)
+        else:
+            courses = Course.objects.all()
         serializer = CourseSerializer(courses, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -51,29 +89,17 @@ class CollectionViewSet(viewsets.ModelViewSet):
         serializer = CollectionSerializer(collection, context={'request': request}, include=include)
         return Response(serializer.data)
 
-class CourseImageViewSet(viewsets.ModelViewSet):
-    queryset = CourseImage.objects.all()
-    serializer_class = CourseImageSerializer
-
-def get_course_pk(lti_context, pk):
-    if lti_context is None:
-        course_pk = pk
-    else:
-        course = get_object_or_404(Course, lti_context_id=pk)
-        course_pk = course.pk
-    return course_pk
-
 class CourseCollectionsView(APIView):
     serializer_class = CollectionSerializer
-    def get(self, request, lti_context=None, pk=None, format=None):
-        course_pk = get_course_pk(lti_context, pk)
+    def get(self, request, pk=None, format=None):
+        course_pk = pk
         collections = Collection.get_course_collections(course_pk)
         include = ['images']
         serializer = CollectionSerializer(collections, many=True, context={'request': request}, include=include)
         return Response(serializer.data)
 
-    def post(self, request, lti_context=None, pk=None, format=None):
-        course_pk = get_course_pk(lti_context, pk)
+    def post(self, request, pk=None, format=None):
+        course_pk = pk
         data = request.data.copy()
         course = get_object_or_404(Course, pk=pk)
         data['course_id'] = course.pk
@@ -86,14 +112,14 @@ class CourseCollectionsView(APIView):
 class CourseImagesListView(APIView):
     serializer_class = CourseImageSerializer
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    def get(self, request, lti_context=None, pk=None, format=None):
-        course_pk = get_course_pk(lti_context, pk)
+    def get(self, request, pk=None, format=None):
+        course_pk = pk
         images = CourseImage.get_course_images(course_pk)
         serializer = CourseImageSerializer(images, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def post(self, request, lti_context=None, pk=None, format=None):
-        course_pk = get_course_pk(lti_context, pk)
+    def post(self, request, pk=None, format=None):
+        course_pk = pk
         course = get_object_or_404(Course, pk=pk)
         data = request.data.copy()
         data['course_id'] = course.pk
@@ -146,4 +172,7 @@ class CourseImageUploadView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+class CourseImageViewSet(viewsets.ModelViewSet):
+    queryset = CourseImage.objects.all()
+    serializer_class = CourseImageSerializer

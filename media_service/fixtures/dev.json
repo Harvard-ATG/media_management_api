@@ -5,6 +5,8 @@
   "fields": {
     "title": "Arthur's Demo Course",
     "lti_context_id": "2a8b2d3fa51ea413d19e480fb6c2eb085b7866a9",
+    "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
+    "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -14,6 +16,8 @@
   "fields": {
     "title": "Jazahn's Demo Course",
     "lti_context_id": "01cc622dbb0d57a76ea5f0caa20a63cf8685e1ef",
+    "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
+    "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -23,6 +27,8 @@
   "fields": {
     "title": "MATH 23A: Linear Algebra and Real Analysis I",
     "lti_context_id": "0f51be9dd2bf866dfbccbc0aa420e57027c63608",
+    "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
+    "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -32,6 +38,8 @@
   "fields": {
     "title": "VIETNAM BA: Elementary Vietnamese",
     "lti_context_id": "e74c7d920cb4b86aa56138de490abc6c17583460",
+    "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
+    "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }

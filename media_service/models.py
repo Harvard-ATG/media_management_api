@@ -113,18 +113,25 @@ class UserProfile(BaseModel):
 
 class Course(BaseModel):
     title = models.CharField(max_length=255)
-    lti_context_id = models.CharField(max_length=255, blank=False)
+    lti_context_id = models.CharField(max_length=128, null=True)
+    lti_tool_consumer_instance_guid = models.CharField(max_length=1024, null=True)
+    lti_tool_consumer_instance_name = models.CharField(max_length=128, null=True)
+    lti_custom_canvas_api_domain = models.CharField(max_length=128, null=True)
+    lti_context_title = models.CharField(max_length=256, null=True)
+    lti_context_label = models.CharField(max_length=256, null=True)
 
     class Meta:
         verbose_name = 'course'
         verbose_name_plural = 'courses'
         ordering = ["title"]
+        unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
     def __unicode__(self):
         return "{0}:{1}:{2}".format(self.id, self.lti_context_id, self.title)
 
 class CourseImage(BaseModel, SortOrderModelMixin):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='images')
+    owner = models.ForeignKey(UserProfile, null=True)
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     is_upload = models.BooleanField(default=True, null=False)
     upload_file_name = models.CharField(max_length=4096, null=True)
@@ -137,7 +144,7 @@ class CourseImage(BaseModel, SortOrderModelMixin):
     thumb_height = models.PositiveIntegerField(null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    owner = models.ForeignKey(UserProfile, null=True)
+    
     sort_order = models.IntegerField(default=0)
 
     class Meta:

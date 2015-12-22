@@ -175,7 +175,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
     
     class Meta:
         model = Course
-        fields = ('url', 'id', 'title', 'lti_context_id', 'collections_url', 'images_url', 'created', 'updated')
+        fields = ('url', 'id', 'title', 'collections_url', 'images_url', 'lti_context_id', 'lti_tool_consumer_instance_guid', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
         include = kwargs.pop('include', [])
@@ -190,4 +190,3 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
         data = super(CourseSerializer, self).to_representation(instance)
         data['type'] = 'courses'
         return data
-    
