@@ -1,3 +1,6 @@
+
+[![Build Status](https://travis-ci.org/Harvard-ATG/media_management_api.svg?branch=feature%2Funittest)](https://travis-ci.org/Harvard-ATG/media_management_api)
+
 ### Quickstart
 
 ```sh
