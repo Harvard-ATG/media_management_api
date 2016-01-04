@@ -60,6 +60,19 @@ class MediaStore(BaseModel):
         return full
 
     def get_image_thumb(self):
+        w, h = self.calc_thumb_size()
+        url = MediaStore.make_iiif_image_server_url({
+            "identifier": self.get_iiif_identifier(encode=True),
+            "region": "full",
+            "size": "{thumb_w},{thumb_h}".format(thumb_w=w, thumb_h=h),
+            "rotation": 0,
+            "quality": "default",
+            "format": self.file_extension,
+        })
+        thumb = {"width": w, "height": h, "url": url}
+        return thumb
+
+    def calc_thumb_size(self):
         w, h = (self.img_width, self.img_height)
         if h > 200:
             thumb_h = 200
@@ -67,16 +80,7 @@ class MediaStore(BaseModel):
         else:
             thumb_h = h
             thumb_w = w
-        url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(encode=True),
-            "region": "full",
-            "size": "{thumb_w},{thumb_h}".format(thumb_w=thumb_w, thumb_h=thumb_h),
-            "rotation": 0,
-            "quality": "default",
-            "format": self.file_extension,
-        })
-        thumb = {"width": thumb_w, "height": thumb_h, "url": url}
-        return thumb
+        return thumb_w, thumb_h
     
     def get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
