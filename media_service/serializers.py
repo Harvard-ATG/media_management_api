@@ -152,10 +152,10 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
             "upload_file_name": None,
         }
         if 'upload' in request.FILES:
-            upload_file = request.FILES['upload']
-            result['upload_file_name'] = upload_file.name
+            uploaded_file = request.FILES['upload']
+            result['upload_file_name'] = uploaded_file.name
             result['is_upload'] = True
-            media_store_upload = MediaStoreUpload(file=upload_file)
+            media_store_upload = MediaStoreUpload(uploaded_file)
             if media_store_upload.is_valid():
                 result['media_store'] = media_store_upload.save()
         return result

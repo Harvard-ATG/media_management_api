@@ -2,8 +2,10 @@ import os
 import hashlib
 import tempfile
 import magic
+import logging
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
+from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -44,14 +46,27 @@ class MediaStoreUpload:
         if media_store_upload.is_valid():
             media_store_instance = media_store_upload.save()
     '''
+    def __init__(self, uploaded_file):
+        if not isinstance(uploaded_file, UploadedFile):
+            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile")
 
-    def __init__(self, *args, **kwargs):
-        self.file = kwargs.get('file', None) # Instance of Django's UploadedFile
-        self.connection = S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
-        self.bucket = self.connection.get_bucket(AWS_S3_BUCKET)
-
+        self.file = uploaded_file 
+        self.connection = self.get_connection() # holds boto.s3.connection.S3Connection instance
+        self.bucket = self.get_bucket(self.connection) # holds boto.s3.bucket.Bucket instance
         self.instance = None # Holds MediaStore instance
-        self._file_md5hash = None # Private: holds cached MD5 hash of the file
+        self._file_md5hash = None # holds cached MD5 hash of the file
+
+    def get_connection(self):
+        '''
+        Returns an S3Connection instance.
+        '''
+        return S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
+
+    def get_bucket(self, connection):
+        '''
+        Returns the bucket where files are stored.
+        '''
+        return connection.get_bucket(AWS_S3_BUCKET)
 
     @transaction.atomic
     def save(self):
