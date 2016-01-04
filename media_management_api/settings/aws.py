@@ -21,5 +21,16 @@ CORS_ORIGIN_REGEX_WHITELIST = (
     '^(https?://)?(\w+\.)*harvard\.edu$',
 )
 
+CORS_ALLOW_HEADERS = (
+        'x-requested-with',
+        'X-File-Size',
+        'content-type',
+        'accept',
+        'origin',
+        'authorization',
+        'x-csrftoken'
+    )
+
+
 # Configure logging
 dictConfig(LOGGING)
