@@ -51,22 +51,8 @@ class MediaStoreUpload:
             raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile")
 
         self.file = uploaded_file 
-        self.connection = self.get_connection() # holds boto.s3.connection.S3Connection instance
-        self.bucket = self.get_bucket(self.connection) # holds boto.s3.bucket.Bucket instance
         self.instance = None # Holds MediaStore instance
         self._file_md5hash = None # holds cached MD5 hash of the file
-
-    def get_connection(self):
-        '''
-        Returns an S3Connection instance.
-        '''
-        return S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
-
-    def get_bucket(self, connection):
-        '''
-        Returns the bucket where files are stored.
-        '''
-        return connection.get_bucket(AWS_S3_BUCKET)
 
     @transaction.atomic
     def save(self):
@@ -89,14 +75,31 @@ class MediaStoreUpload:
         '''
         return True
 
+    def get_s3_connection(self):
+        '''
+        Returns an S3Connection instance.
+        '''
+        return S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
+
+    def get_s3_bucket(self, connection):
+        '''
+        Returns the bucket where files are stored.
+        '''
+        return connection.get_bucket(AWS_S3_BUCKET)
+
+
     def saveToBucket(self):
         '''
         Saves the django UploadedFile to the designated S3 bucket.
         '''
-        k = Key(self.bucket)
+        connection = self.get_s3_connection()
+        bucket = self.get_s3_bucket(connection)
+
+        k = Key(bucket)
         k.key = self.getS3FileKey()
         self.file.seek(0)
         k.set_contents_from_file(self.file, replace=True)
+
         return True
 
     def instanceExists(self):
