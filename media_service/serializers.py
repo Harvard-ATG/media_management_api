@@ -171,7 +171,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
     collections_url = serializers.HyperlinkedIdentityField(view_name="course-collections", lookup_field="pk")
-    images_url = serializers.HyperlinkedIdentityField(view_name="courseimages-list", lookup_field="pk")
+    images_url = serializers.HyperlinkedIdentityField(view_name="course-images", lookup_field="pk")
     
     class Meta:
         model = Course
