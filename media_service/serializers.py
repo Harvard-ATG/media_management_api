@@ -100,6 +100,23 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         )
         collection.save()
         return collection
+    
+    def update(self, instance, validated_data):
+        request = self.context['request']
+        if not validated_data:
+            return instance
+        if 'title' in validated_data:
+            instance.title = validated_data['title']
+        if 'description' in validated_data:
+            instance.description = validated_data['description']
+        if 'course_image_ids' in validated_data:
+            course_image_ids = validated_data['course_image_ids']
+            CollectionImage.objects.filter(collection__pk=instance.pk).delete()
+            for course_image_id in course_image_ids:
+                CollectionImage(collection=instance.pk, course_image=course_image_id).save()
+        instance.save()
+        return instance
+    
 
     def to_representation(self, instance):
         data = super(CollectionSerializer, self).to_representation(instance)
