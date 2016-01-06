@@ -154,6 +154,7 @@ class CourseImage(BaseModel, SortOrderModelMixin):
     class Meta:
         verbose_name = 'course_image'
         verbose_name_plural = 'course_images'
+        ordering = ["course", "sort_order", "title"]
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
