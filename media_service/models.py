@@ -130,7 +130,7 @@ class Course(BaseModel):
         return "{0}:{1}:{2}".format(self.id, self.lti_context_id, self.title)
 
 class CourseImage(BaseModel, SortOrderModelMixin):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='images')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
     owner = models.ForeignKey(UserProfile, null=True)
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     is_upload = models.BooleanField(default=True, null=False)
@@ -177,7 +177,7 @@ class CourseImage(BaseModel, SortOrderModelMixin):
 class Collection(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='collections')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
     sort_order = models.IntegerField(default=0)
 
     class Meta:
@@ -198,8 +198,8 @@ class Collection(BaseModel, SortOrderModelMixin):
         return collections
 
 class CollectionImage(BaseModel, SortOrderModelMixin):
-    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='images')
-    course_image = models.ForeignKey(CourseImage, on_delete=models.CASCADE, related_name='collections')
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE)
+    course_image = models.ForeignKey(CourseImage, on_delete=models.CASCADE)
     sort_order = models.IntegerField(default=0)
 
     class Meta:
