@@ -76,7 +76,7 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
 
 class CollectionCourseImageIdsField(serializers.Field):
     def to_representation(self, obj):
-        return obj.collectionimage_set.values_list('course_image__pk', flat=True)
+        return obj.images.values_list('course_image__pk', flat=True)
 
     def to_internal_value(self, data):
         course_pk = self.parent.instance.course.pk
