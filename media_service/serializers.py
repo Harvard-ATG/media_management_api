@@ -74,14 +74,30 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
         data.update(course_image_to_representation(instance.course_image))
         return data
 
+class CollectionCourseImageIdsField(serializers.Field):
+    def to_representation(self, obj):
+        return obj.collectionimage_set.values_list('course_image__pk', flat=True)
+
+    def to_internal_value(self, data):
+        course_pk = self.parent.instance.course.pk
+        found = CourseImage.objects.filter(course__pk=course_pk, pk__in=data).distinct().values_list('pk', flat=True)
+        diff = list(set(data).difference(found))
+        if len(diff) != 0:
+            raise serializers.ValidationError("Invalid course_image_ids for course %s. Invalid: %s Valid: %s." % (course_pk, diff, found))
+        return data
+
+    def get_attribute(self, obj):
+        return obj
+
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     images_url = serializers.HyperlinkedIdentityField(view_name="collectionimages-list", lookup_field="pk")
     description = serializers.CharField(max_length=None, required=False)
+    course_image_ids = CollectionCourseImageIdsField(read_only=False, required=False)
 
     class Meta:
         model = Collection
-        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course_id', 'images_url', 'created', 'updated')
+        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course_id', 'course_image_ids', 'images_url', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
         include = kwargs.pop('include', [])
@@ -90,7 +106,6 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         if 'images' in include:
             self.fields['images'] = CollectionImageSerializer(many=True, read_only=True)
 
-        self._collection_images = list(CollectionImage.objects.all())
 
     def create(self, validated_data):
         collection = Collection(
@@ -113,16 +128,13 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             course_image_ids = validated_data['course_image_ids']
             CollectionImage.objects.filter(collection__pk=instance.pk).delete()
             for course_image_id in course_image_ids:
-                CollectionImage(collection=instance.pk, course_image=course_image_id).save()
+                CollectionImage.objects.create(collection_id=instance.pk, course_image_id=course_image_id)
         instance.save()
         return instance
-    
 
     def to_representation(self, instance):
         data = super(CollectionSerializer, self).to_representation(instance)
         data['type'] = 'collections'
-        collection_images = [x for x in self._collection_images if x.collection.pk == instance.pk]
-        data['course_image_ids'] = [x.course_image.pk for x in collection_images]
         return data
 
 class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
