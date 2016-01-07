@@ -101,6 +101,58 @@ class TestCourseEndpoint(APITestCase):
             for item in response.data[nested_key]:
                 item_keys = sorted([k for k in item])
                 self.assertEqual(item_keys, expected_image_keys)
+
+    def test_add_new_course(self):
+        url = reverse('course-list')
+        body = {
+            "title": "Test Course", 
+            "lti_context_id": "e4d7f1b4ed2e42d15898f4b27b019da4",
+            "lti_tool_consumer_instance_guid": "test.localhost"
+        }
+
+        # Create the new course
+        response = self.client.post(url, body)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that the fields we submitted are reflected in a course object
+        self.assertTrue('id' in response.data)
+        self.assertTrue(Course.objects.filter(pk=response.data['id']).exists())
+        created_course = Course.objects.get(pk=response.data['id'])
+        for f in body:
+            self.assertEqual(response.data[f], body[f])
+            self.assertEqual(getattr(created_course, f), body[f])
+
+    def test_delete_course(self):
+        pk = 1
+        url = reverse('course-detail', kwargs={"pk":pk})
+        response = self.client.delete(url)
+        self.assertTrue(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Course.objects.filter(pk=pk).exists())
+
+    def test_update_course(self):
+        pk = 1
+        url = reverse('course-detail', kwargs={"pk": pk})
+        body = {
+            "title": "Title Updated(!)",
+            "lti_context_id": "updated_context_id",
+            "lti_tool_consumer_instance_guid": "updated_guid" 
+        }
+
+        # Show that our update differs from the existing course object
+        course_before_update = Course.objects.get(pk=pk)
+        for f in body:
+            self.assertNotEqual(getattr(course_before_update, f), body[f])
+        
+        # Do the update
+        response = self.client.put(url, body)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Show that the updates were returned in the response and
+        # are reflected in the course object
+        course_after_update = Course.objects.get(pk=pk)
+        for f in body:
+            self.assertEqual(response.data[f], body[f])
+            self.assertEqual(getattr(course_after_update, f), body[f])
     
 class TestCollectionEndpoint(APITestCase):
     def setUp(self):

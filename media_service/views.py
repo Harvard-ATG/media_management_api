@@ -72,6 +72,16 @@ be an empty list or a list with one object.
         return Response(serializer.data)
 
 class CollectionViewSet(viewsets.ModelViewSet):
+    '''
+A **collection** resource is a grouping of *images*.
+
+Collection Endpoints
+----------------
+
+- `/collections`  Lists collections
+- `/collections/{pk}` Collection detail
+- `/collections/{pk}/images`  Lists a collection's images
+    '''
     queryset = Collection.objects.all()
     serializer_class = CollectionSerializer
     
