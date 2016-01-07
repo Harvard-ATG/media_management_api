@@ -188,6 +188,7 @@ class Collection(BaseModel, SortOrderModelMixin):
     class Meta:
         verbose_name = 'collection'
         verbose_name_plural = 'collections'
+        ordering = ['course', 'sort_order', 'title']
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
@@ -210,6 +211,7 @@ class CollectionImage(BaseModel, SortOrderModelMixin):
     class Meta:
         verbose_name = 'collection_image'
         verbose_name_plural = 'collection_images'
+        ordering = ['collection', 'sort_order', 'course_image']
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
