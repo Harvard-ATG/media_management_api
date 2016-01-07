@@ -1,3 +1,4 @@
+import unittest
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -102,7 +103,7 @@ class TestCourseEndpoint(APITestCase):
                 item_keys = sorted([k for k in item])
                 self.assertEqual(item_keys, expected_image_keys)
 
-    def test_add_new_course(self):
+    def test_create_course(self):
         url = reverse('course-list')
         body = {
             "title": "Test Course", 
@@ -153,13 +154,82 @@ class TestCourseEndpoint(APITestCase):
         for f in body:
             self.assertEqual(response.data[f], body[f])
             self.assertEqual(getattr(course_after_update, f), body[f])
+
+    def test_add_collection_to_course(self):
+        pk = 1
+        url = reverse('course-collections', kwargs={"pk": pk})
+        body = {
+            "title": "Test Collection", 
+            "description": "Some description",
+        }
+
+        # Create the new collection
+        response = self.client.post(url, body)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that the fields we submitted are reflected in a course object
+        self.assertTrue('id' in response.data)
+        self.assertTrue(Collection.objects.filter(pk=response.data['id']).exists())
+        created_collection = Collection.objects.get(pk=response.data['id'])
+        self.assertEqual(created_collection.course.pk, pk)
+        for f in body:
+            self.assertEqual(response.data[f], body[f])
+            self.assertEqual(getattr(created_collection, f), body[f])
     
 class TestCollectionEndpoint(APITestCase):
-    def setUp(self):
-        pass
-    def tearDown(self):
-        pass
+    fixtures = ['test.json']
 
+    def test_create_collection(self):
+        url = reverse('collection-list')
+        body = {
+            "title": "Test Collection", 
+            "description": "Some description",
+            "course_id": 1,
+        }
+
+        # Create the new collection
+        response = self.client.post(url, body)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Check that the fields we submitted are reflected in a course object
+        self.assertTrue('id' in response.data)
+        self.assertTrue(Collection.objects.filter(pk=response.data['id']).exists())
+        created_collection = Collection.objects.get(pk=response.data['id'])
+        for f in body:
+            self.assertEqual(response.data[f], body[f])
+            self.assertEqual(getattr(created_collection, f), body[f])
+
+    def test_delete_collection(self):
+        pk = 1
+        url = reverse('collection-detail', kwargs={"pk":pk})
+        response = self.client.delete(url)
+        self.assertTrue(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Collection.objects.filter(pk=pk).exists())
+
+    def test_update_collection(self):
+        pk = 1
+        url = reverse('collection-detail', kwargs={"pk": pk})
+        collection = Collection.objects.get(pk=pk)
+        body = {
+            "title": "Thidwick The Big-Hearted Moose",
+            "description": 'Thidwick the big-hearted moose is happy his antlers "can be of some use" to a menagerie of animals who move in and make themselves at home.',
+            "course_id": collection.course.pk,
+            "course_image_ids": [1,2,3,4],
+        }
+
+        # Do the update
+        response = self.client.put(url, body)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Show that the updates were returned in the response and
+        # are reflected in the course object
+        collection_after_update = Collection.objects.get(pk=pk)
+        for f in ('title', 'description', 'course_id'):
+            self.assertEqual(response.data[f], body[f])
+
+        course_image_ids = collection_after_update.images.values_list('course_image__pk', flat=True)
+        self.assertSequenceEqual(response.data['course_image_ids'], course_image_ids)
+        
 class TestCourseImageEndpoint(APITestCase):
     def setUp(self):
         pass
