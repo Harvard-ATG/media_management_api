@@ -281,10 +281,4 @@ class TestCollectionEndpoint(APITestCase):
 
         course_image_ids = collection_after_update.images.values_list('course_image__pk', flat=True)
         self.assertSequenceEqual(response.data['course_image_ids'], course_image_ids)
-        
-class TestCourseImageEndpoint(APITestCase):
-    def setUp(self):
-        pass
-    def tearDown(self):
-        pass
 
