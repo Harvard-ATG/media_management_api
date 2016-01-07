@@ -179,6 +179,58 @@ class TestCourseEndpoint(APITestCase):
 class TestCollectionEndpoint(APITestCase):
     fixtures = ['test.json']
 
+    def test_collection_list(self):
+        collections = Collection.objects.all()
+        url = reverse('collection-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), len(collections))
+        
+        # Example of what we would expect
+        example_item = {
+            "url": "http://localhost:8000/collections/1",
+            "id": 1,
+            "title": "Scrambled Eggs Super!",
+            "description": "",
+            "sort_order": 1,
+            "course_id": 1,
+            "course_image_ids": [1,4],
+            "images_url": "http://localhost:8000/collections/1/images",
+            "created": "2015-12-15T15:42:33.443434Z",
+            "updated": "2016-01-06T21:13:08.353908Z",
+            "type": "collections"
+        }
+        expected_keys = sorted(example_item.keys())
+        for collection_data in response.data:
+            actual_keys = sorted(collection_data.keys())
+            self.assertEqual(actual_keys, expected_keys)
+
+    def test_collection_detail(self):
+        pk = 1
+        course = Collection.objects.get(pk=pk)
+        url = reverse('collection-detail', kwargs={"pk": pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Get an example response item
+        example_item = {
+            "url": "http://localhost:8000/collections/1",
+            "id": 1,
+            "title": "Scrambled Eggs Super!",
+            "description": "",
+            "sort_order": 1,
+            "course_id": 1,
+            "course_image_ids": [1,4],
+            "images": [],
+            "images_url": "http://localhost:8000/collections/1/images",
+            "created": "2015-12-15T15:42:33.443434Z",
+            "updated": "2016-01-06T21:13:08.353908Z",
+            "type": "collections"
+        }
+        expected_keys = sorted(example_item.keys())
+        actual_keys = sorted(response.data.keys())
+        self.assertEqual(actual_keys, expected_keys)
+
     def test_create_collection(self):
         url = reverse('collection-list')
         body = {
