@@ -1,3 +1,6 @@
+
+[![Build Status](https://travis-ci.org/Harvard-ATG/media_management_api.svg)](https://travis-ci.org/Harvard-ATG/media_management_api)
+
 ### Quickstart
 
 ```sh
@@ -6,3 +9,4 @@ $ vagrant up
 $ vagrant ssh
 $ python manage.py runserver 0.0.0.0:8000
 ```
+

@@ -181,10 +181,10 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
             "upload_file_name": None,
         }
         if 'upload' in request.FILES:
-            upload_file = request.FILES['upload']
-            result['upload_file_name'] = upload_file.name
+            uploaded_file = request.FILES['upload']
+            result['upload_file_name'] = uploaded_file.name
             result['is_upload'] = True
-            media_store_upload = MediaStoreUpload(file=upload_file)
+            media_store_upload = MediaStoreUpload(uploaded_file)
             if media_store_upload.is_valid():
                 result['media_store'] = media_store_upload.save()
         return result
@@ -200,7 +200,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
     collections_url = serializers.HyperlinkedIdentityField(view_name="course-collections", lookup_field="pk")
-    images_url = serializers.HyperlinkedIdentityField(view_name="courseimages-list", lookup_field="pk")
+    images_url = serializers.HyperlinkedIdentityField(view_name="course-images", lookup_field="pk")
     
     class Meta:
         model = Course

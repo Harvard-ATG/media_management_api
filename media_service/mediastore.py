@@ -2,8 +2,10 @@ import os
 import hashlib
 import tempfile
 import magic
+import logging
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
+from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -44,14 +46,13 @@ class MediaStoreUpload:
         if media_store_upload.is_valid():
             media_store_instance = media_store_upload.save()
     '''
+    def __init__(self, uploaded_file):
+        if not isinstance(uploaded_file, UploadedFile):
+            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile")
 
-    def __init__(self, *args, **kwargs):
-        self.file = kwargs.get('file', None) # Instance of Django's UploadedFile
-        self.connection = S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
-        self.bucket = self.connection.get_bucket(AWS_S3_BUCKET)
-
+        self.file = uploaded_file 
         self.instance = None # Holds MediaStore instance
-        self._file_md5hash = None # Private: holds cached MD5 hash of the file
+        self._file_md5hash = None # holds cached MD5 hash of the file
 
     @transaction.atomic
     def save(self):
@@ -74,14 +75,31 @@ class MediaStoreUpload:
         '''
         return True
 
+    def get_s3_connection(self):
+        '''
+        Returns an S3Connection instance.
+        '''
+        return S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
+
+    def get_s3_bucket(self, connection):
+        '''
+        Returns the bucket where files are stored.
+        '''
+        return connection.get_bucket(AWS_S3_BUCKET)
+
+
     def saveToBucket(self):
         '''
         Saves the django UploadedFile to the designated S3 bucket.
         '''
-        k = Key(self.bucket)
+        connection = self.get_s3_connection()
+        bucket = self.get_s3_bucket(connection)
+
+        k = Key(bucket)
         k.key = self.getS3FileKey()
         self.file.seek(0)
         k.set_contents_from_file(self.file, replace=True)
+
         return True
 
     def instanceExists(self):
