@@ -132,7 +132,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             for course_image_id in course_image_ids:
                 CollectionImage.objects.create(collection_id=instance.pk, course_image_id=course_image_id)
         instance.save()
-        return instance
+        return Collection.objects.get(pk=instance.pk) # Get object fresh from DB to avoid cache problems
 
     def to_representation(self, instance):
         data = super(CollectionSerializer, self).to_representation(instance)
