@@ -62,21 +62,23 @@ class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
 
     def to_representation(self, instance):
         data =  super(CollectionImageSerializer, self).to_representation(instance)
+        course_image = instance.course_image
         data.update({
             "type": 'collectionimages',
             "url": reverse('collectionimages-detail', kwargs={'pk': instance.pk}, request=self.context['request']),
-            "course_image_id": instance.course_image.id,
-            "title": instance.course_image.title,
-            "description": instance.course_image.description,
-            "upload_file_name": instance.course_image.upload_file_name,
-            "is_upload": instance.course_image.is_upload,
+            "course_image_id": course_image.id,
+            "title": course_image.title,
+            "description": course_image.description,
+            "upload_file_name": course_image.upload_file_name,
+            "is_upload": course_image.is_upload,
         })
-        data.update(course_image_to_representation(instance.course_image))
+        data.update(course_image_to_representation(course_image))
         return data
 
 class CollectionCourseImageIdsField(serializers.Field):
     def to_representation(self, obj):
-        return obj.images.values_list('course_image__pk', flat=True)
+        course_image_ids = [collection_image.course_image_id for collection_image in obj.images.all()]
+        return course_image_ids
 
     def to_internal_value(self, data):
         course_pk = self.parent.instance.course.pk
