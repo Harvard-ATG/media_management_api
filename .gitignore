@@ -7,7 +7,8 @@ sqlnet.log
 *.pot
 .vagrant
 *.sqlite3
-pyenv
+/pyenv
+/rest_framework
 # Generated files
 secure.py
 gunicorn.py

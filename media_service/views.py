@@ -46,7 +46,7 @@ To search for a course associated with an LTI context:
 Since one and only one instance of a course can exist with those two attributes, the response should
 be an empty list or a list with one object.
     '''
-    queryset = Course.objects.all()
+    queryset = Course.objects.prefetch_related('images', 'collections', 'collections__images')
     serializer_class = CourseSerializer
     
     def _get_lti_search_filters(self, request):
@@ -59,14 +59,14 @@ be an empty list or a list with one object.
     def list(self, request, format=None):
         lti_search = self._get_lti_search_filters(request)
         if len(lti_search.keys()) > 0:
-            courses = Course.objects.filter(**lti_search)
+            courses = self.get_queryset().filter(**lti_search)
         else:
-            courses = Course.objects.all()
+            courses = self.get_queryset()
         serializer = CourseSerializer(courses, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
-        course = get_object_or_404(Course, pk=pk)
+        course = self.get_object()
         include = ['images', 'collections']
         serializer = CourseSerializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
@@ -82,16 +82,16 @@ Collection Endpoints
 - `/collections/{pk}` Collection detail
 - `/collections/{pk}/images`  Lists a collection's images
     '''
-    queryset = Collection.objects.all()
+    queryset = Collection.objects.select_related('course').prefetch_related('images__course_image')
     serializer_class = CollectionSerializer
     
     def list(self, request, format=None):
-        collections = Collection.objects.all()
+        collections = self.get_queryset()
         serializer = CollectionSerializer(collections, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
-        collection = get_object_or_404(Collection, pk=pk)
+        collection = self.get_object()
         include = ['images']
         serializer = CollectionSerializer(collection, context={'request': request}, include=include)
         return Response(serializer.data)

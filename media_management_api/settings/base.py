@@ -50,6 +50,9 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+if DEBUG:
+    MIDDLEWARE_CLASSES = ['media_management_api.middleware.QueryCountDebugMiddleware'] + MIDDLEWARE_CLASSES
+
 # Authentication
 
 # Django defaults are below, but will need to be customized if using something
@@ -213,15 +216,25 @@ LOGGING = {
         # Make sure that propagate is False so that the root logger doesn't get involved
         # after an app logger handles a log message.
         'django': {
-            'handlers': ['console'],
+            'handlers': ['default', 'console'],
             'level': 'INFO',
             'propagate': True,
         },
         'django.db': {
-            'handlers': ['console'],
-            'level': 'INFO', # Set to DEBUG to see SQL output
+            'handlers': ['default', 'console'],
+            'level': 'DEBUG', # Set to DEBUG to see SQL output
             'propagate': True,
-        }
+        },
+        'media_management_api': {
+            'handlers': ['default', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'media_service': {
+            'handlers': ['default', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 
