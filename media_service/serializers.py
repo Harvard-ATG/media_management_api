@@ -173,6 +173,7 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
         result = self.handle_file_upload(request)
         instance.media_store = result['media_store']
         instance.upload_file_name = result['upload_file_name']
+        instance.is_upload = result['is_upload']
         instance.save()
         return instance
 
