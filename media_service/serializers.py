@@ -1,20 +1,20 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.reverse import reverse
-from media_service.models import MediaStore, Course, Collection, CollectionImage, CourseImage
+from media_service.models import MediaStore, Course, Collection, Item, Resource
 from media_service.mediastore import MediaStoreUpload
 
-def course_image_to_representation(course_image):
-    if course_image.media_store is None:
-        image_type = course_image.img_type
-        image_url = course_image.img_url
-        image_width = course_image.img_width
-        image_height = course_image.img_height
-        thumb_url = course_image.thumb_url
-        thumb_width = course_image.thumb_width
-        thumb_height = course_image.thumb_height
+def resource_to_representation(resource):
+    if resource.media_store is None:
+        image_type = resource.img_type
+        image_url = resource.img_url
+        image_width = resource.img_width
+        image_height = resource.img_height
+        thumb_url = resource.thumb_url
+        thumb_width = resource.thumb_width
+        thumb_height = resource.thumb_height
     else:
-        media_store = course_image.media_store
+        media_store = resource.media_store
         thumb = media_store.get_image_thumb()
         full = media_store.get_image_full()
         image_type = media_store.file_type
@@ -40,49 +40,49 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         model = User
         fields = ('url', 'id', 'username', 'email', 'groups')
 
-class CollectionImageSerializer(serializers.HyperlinkedModelSerializer):
+class ItemSerializer(serializers.HyperlinkedModelSerializer):
     collection_id = serializers.PrimaryKeyRelatedField(queryset=Collection.objects.all())
     collection_url = serializers.HyperlinkedIdentityField(view_name="collection-detail", lookup_field="pk")
-    course_image_id = serializers.PrimaryKeyRelatedField(queryset=CourseImage.objects.all())
+    course_image_id = serializers.PrimaryKeyRelatedField(queryset=Resource.objects.all(), source='resource_id')
     
     class Meta:
-        model = CollectionImage
+        model = Item
         fields = ('id', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
-        super(CollectionImageSerializer, self).__init__(*args, **kwargs)
+        super(ItemSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
-        collection_image = CollectionImage(
+        item = Item(
             collection=validated_data['collection_id'],
-            course_image=validated_data['course_image_id'],
+            resource=validated_data['course_image_id'],
         )
-        collection_image.save()
-        return collection_image
+        item.save()
+        return item
 
     def to_representation(self, instance):
-        data =  super(CollectionImageSerializer, self).to_representation(instance)
-        course_image = instance.course_image
+        data =  super(ItemSerializer, self).to_representation(instance)
+        resource = instance.resource
         data.update({
             "type": 'collectionimages',
             "url": reverse('collectionimages-detail', kwargs={'pk': instance.pk}, request=self.context['request']),
-            "course_image_id": course_image.id,
-            "title": course_image.title,
-            "description": course_image.description,
-            "upload_file_name": course_image.upload_file_name,
-            "is_upload": course_image.is_upload,
+            "course_image_id": resource.id,
+            "title": resource.title,
+            "description": resource.description,
+            "upload_file_name": resource.upload_file_name,
+            "is_upload": resource.is_upload,
         })
-        data.update(course_image_to_representation(course_image))
+        data.update(resource_to_representation(resource))
         return data
 
-class CollectionCourseImageIdsField(serializers.Field):
+class CollectionResourceIdsField(serializers.Field):
     def to_representation(self, obj):
-        course_image_ids = [collection_image.course_image_id for collection_image in obj.images.all()]
+        course_image_ids = [item.resource_id for item in obj.items.all()]
         return course_image_ids
 
     def to_internal_value(self, data):
         course_pk = self.parent.instance.course.pk
-        found = CourseImage.objects.filter(course__pk=course_pk, pk__in=data).distinct().values_list('pk', flat=True)
+        found = Resource.objects.filter(course__pk=course_pk, pk__in=data).distinct().values_list('pk', flat=True)
         diff = list(set(data).difference(found))
         if len(diff) != 0:
             raise serializers.ValidationError("Invalid course_image_ids for course %s. Invalid: %s Valid: %s." % (course_pk, diff, found))
@@ -95,7 +95,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     images_url = serializers.HyperlinkedIdentityField(view_name="collectionimages-list", lookup_field="pk")
     description = serializers.CharField(max_length=None, required=False)
-    course_image_ids = CollectionCourseImageIdsField(read_only=False, required=False)
+    course_image_ids = CollectionResourceIdsField(read_only=False, required=False)
 
     class Meta:
         model = Collection
@@ -104,10 +104,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     def __init__(self, *args, **kwargs):
         include = kwargs.pop('include', [])
         super(CollectionSerializer, self).__init__(*args, **kwargs)
-        
         if 'images' in include:
-            self.fields['images'] = CollectionImageSerializer(many=True, read_only=True)
-
+            self.fields['images'] = ItemSerializer(source="items", many=True, read_only=True)
 
     def create(self, validated_data):
         collection = Collection(
@@ -128,9 +126,9 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             instance.description = validated_data['description']
         if 'course_image_ids' in validated_data:
             course_image_ids = validated_data['course_image_ids']
-            CollectionImage.objects.filter(collection__pk=instance.pk).delete()
+            Item.objects.filter(collection__pk=instance.pk).delete()
             for course_image_id in course_image_ids:
-                CollectionImage.objects.create(collection_id=instance.pk, course_image_id=course_image_id)
+                Item.objects.create(collection_id=instance.pk, resource_id=course_image_id)
         instance.save()
         return Collection.objects.get(pk=instance.pk) # Get object fresh from DB to avoid cache problems
 
@@ -139,23 +137,23 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         data['type'] = 'collections'
         return data
 
-class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="courseimage-detail", lookup_field="pk")
+class ResourceSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
-    upload_url = serializers.HyperlinkedIdentityField(view_name="courseimage-upload", lookup_field="pk")
+    upload_url = serializers.HyperlinkedIdentityField(view_name="image-upload", lookup_field="pk")
     description = serializers.CharField(max_length=None, required=False)
 
     class Meta:
-        model = CourseImage
+        model = Resource
         fields = ('url', 'upload_url', 'id', 'course_id', 'title', 'description', 'sort_order', 'upload_file_name', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
-        super(CourseImageSerializer, self).__init__(*args, **kwargs)
+        super(ResourceSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
         request = self.context['request']
         result = self.handle_file_upload(request)
-        course_image_attrs = {
+        resource_attrs = {
             "course": validated_data['course_id'],
             "title": validated_data['title'],
             "description": validated_data.get('description', ''),
@@ -163,10 +161,10 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
             "upload_file_name": result['upload_file_name'],
         }
 
-        course_image = CourseImage(**course_image_attrs)
-        course_image.save()
+        resource = Resource(**resource_attrs)
+        resource.save()
 
-        return course_image
+        return resource
 
     def update(self, instance, validated_data):
         request = self.context['request']
@@ -193,12 +191,12 @@ class CourseImageSerializer(serializers.HyperlinkedModelSerializer):
         return result
 
     def to_representation(self, instance):
-        data =  super(CourseImageSerializer, self).to_representation(instance)
+        data =  super(ResourceSerializer, self).to_representation(instance)
         data.update({
-            "type": "courseimages",
+            "type": "images",
             "is_upload": instance.is_upload,
         })
-        data.update(course_image_to_representation(instance))
+        data.update(resource_to_representation(instance))
         return data
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
@@ -214,7 +212,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
         super(CourseSerializer, self).__init__(*args, **kwargs)
 
         if 'images' in include:
-            self.fields['images'] = CourseImageSerializer(many=True, read_only=True)
+            self.fields['images'] = ResourceSerializer(source="resources", many=True, read_only=True)
         if 'collections' in include:
             self.fields['collections'] = CollectionSerializer(many=True, read_only=True)
             

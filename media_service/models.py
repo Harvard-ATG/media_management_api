@@ -133,8 +133,8 @@ class Course(BaseModel):
     def __unicode__(self):
         return "{0}:{1}:{2}".format(self.id, self.lti_context_id, self.title)
 
-class CourseImage(BaseModel, SortOrderModelMixin):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='images')
+class Resource(BaseModel, SortOrderModelMixin):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
     owner = models.ForeignKey(UserProfile, null=True)
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     is_upload = models.BooleanField(default=True, null=False)
@@ -152,8 +152,8 @@ class CourseImage(BaseModel, SortOrderModelMixin):
     sort_order = models.IntegerField(default=0)
 
     class Meta:
-        verbose_name = 'course_image'
-        verbose_name_plural = 'course_images'
+        verbose_name = 'resource'
+        verbose_name_plural = 'resources'
         ordering = ["course", "sort_order", "title"]
 
     def save(self, *args, **kwargs):
@@ -162,13 +162,13 @@ class CourseImage(BaseModel, SortOrderModelMixin):
         if self.media_store:
             self.media_store.reference_count += 1
             self.media_store.save() 
-        super(CourseImage, self).save(*args, **kwargs)
+        super(Resource, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         if self.media_store:
             self.media_store.reference_count -= 1
             self.media_store.save() 
-        super(CourseImage, self).delete(*args, **kwargs)
+        super(Resource, self).delete(*args, **kwargs)
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
@@ -203,20 +203,20 @@ class Collection(BaseModel, SortOrderModelMixin):
         collections = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
         return collections
 
-class CollectionImage(BaseModel, SortOrderModelMixin):
-    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='images')
-    course_image = models.ForeignKey(CourseImage, on_delete=models.CASCADE, related_name='collectionimages')
+class Item(BaseModel, SortOrderModelMixin):
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='items')
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name='collectionitems')
     sort_order = models.IntegerField(default=0)
 
     class Meta:
-        verbose_name = 'collection_image'
-        verbose_name_plural = 'collection_images'
-        ordering = ['collection', 'sort_order', 'course_image']
+        verbose_name = 'item'
+        verbose_name_plural = 'items'
+        ordering = ['collection', 'sort_order', 'resource']
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"collection__pk": self.collection.pk})
-        super(CollectionImage, self).save(*args, **kwargs)
+        super(Item, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return "{0}".format(self.id)
