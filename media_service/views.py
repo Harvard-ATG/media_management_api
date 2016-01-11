@@ -5,16 +5,16 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
-from media_service.models import Course, Collection, CourseImage, MediaStore, CollectionImage
-from media_service.serializers import UserSerializer, CourseSerializer, CourseImageSerializer, \
-    CollectionSerializer, CollectionImageSerializer
+from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
+from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, \
+    CollectionSerializer, CollectionResourceSerializer
 
 class APIRoot(APIView):
     def get(self, request, format=None):
         return Response({
             'courses': reverse('course-list', request=request, format=format),
             'collections': reverse('collection-list', request=request, format=format),
-            'course-images': reverse('courseimage-list', request=request, format=format),
+            'images': reverse('image-list', request=request, format=format),
         })
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -46,7 +46,7 @@ To search for a course associated with an LTI context:
 Since one and only one instance of a course can exist with those two attributes, the response should
 be an empty list or a list with one object.
     '''
-    queryset = Course.objects.prefetch_related('images', 'collections', 'collections__images')
+    queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources')
     serializer_class = CourseSerializer
     
     def _get_lti_search_filters(self, request):
@@ -82,7 +82,7 @@ Collection Endpoints
 - `/collections/{pk}` Collection detail
 - `/collections/{pk}/images`  Lists a collection's images
     '''
-    queryset = Collection.objects.select_related('course').prefetch_related('images__course_image')
+    queryset = Collection.objects.select_related('course').prefetch_related('resources__resource')
     serializer_class = CollectionSerializer
     
     def list(self, request, format=None):
@@ -117,12 +117,12 @@ class CourseCollectionsView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CourseImagesListView(APIView):
-    serializer_class = CourseImageSerializer
+    serializer_class = ResourceSerializer
     parser_classes = (JSONParser, MultiPartParser, FormParser)
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        images = CourseImage.get_course_images(course_pk)
-        serializer = CourseImageSerializer(images, many=True, context={'request': request})
+        images = Resource.get_course_images(course_pk)
+        serializer = ResourceSerializer(images, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
@@ -130,56 +130,56 @@ class CourseImagesListView(APIView):
         course = get_object_or_404(Course, pk=pk)
         data = request.data.copy()
         data['course_id'] = course.pk
-        serializer = CourseImageSerializer(data=data, context={'request': request})
+        serializer = ResourceSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class CollectionImagesListView(APIView):
-    serializer_class = CollectionImageSerializer
+    serializer_class = CollectionResourceSerializer
     def get(self, request, pk=None, format=None):
-        collection_images = CollectionImage.get_collection_images(pk)
-        serializer = CollectionImageSerializer(collection_images, many=True, context={'request': request})
+        collection_resources = CollectionResource.get_collection_images(pk)
+        serializer = CollectionResourceSerializer(collection_resources, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
         collection = get_object_or_404(Collection, pk=pk)
         data = []
-        for collection_image in request.data:
-            item = collection_image.copy()
-            item['collection_id'] = collection.pk
-            data.append(item)
-        serializer = CollectionImageSerializer(data=data, many=True, context={'request': request})
+        for collection_resource in request.data:
+            collection_resource = collection_resource.copy()
+            collection_resource['collection_id'] = collection.pk
+            data.append(collection_resource)
+        serializer = CollectionResourceSerializer(data=data, many=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CollectionImagesDetailView(APIView):
-    serializer_class = CollectionImageSerializer
+    serializer_class = CollectionResourceSerializer
     def get(self, request, pk=None, format=None):
-         collection_image = get_object_or_404(CollectionImage, pk=pk)
-         serializer = CollectionImageSerializer(collection_image, context={'request': request})
+         collection_resource = get_object_or_404(CollectionResource, pk=pk)
+         serializer = CollectionResourceSerializer(collection_resource, context={'request': request})
          return Response(serializer.data)
     
     def delete(self, request, pk=None, format=None):
-        collection_image = get_object_or_404(CollectionImage, pk=pk)
-        collection_image.delete()
+        collection_resource = get_object_or_404(CollectionResource, pk=pk)
+        collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CourseImageUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     def post(self, request, pk=None, format=None):
-        instance = get_object_or_404(CourseImage, pk=pk)
+        instance = get_object_or_404(Resource, pk=pk)
         data = request.data.copy()
         data['course_id'] = instance.course.pk
-        serializer = CourseImageSerializer(data=data, instance=instance, context={'request': request})
+        serializer = ResourceSerializer(data=data, instance=instance, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CourseImageViewSet(viewsets.ModelViewSet):
-    queryset = CourseImage.objects.all()
-    serializer_class = CourseImageSerializer
+    queryset = Resource.objects.all()
+    serializer_class = ResourceSerializer

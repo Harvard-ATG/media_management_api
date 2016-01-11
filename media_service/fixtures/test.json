@@ -85,7 +85,7 @@
   }
 },
 {
-  "model": "media_service.courseimage",
+  "model": "media_service.resource",
   "pk": 1,
   "fields": {
     "course": 1,
@@ -98,7 +98,7 @@
   }
 },
 {
-  "model": "media_service.courseimage",
+  "model": "media_service.resource",
   "pk": 2,
   "fields": {
     "course": 1,
@@ -111,7 +111,7 @@
   }
 },
 {
-  "model": "media_service.courseimage",
+  "model": "media_service.resource",
   "pk": 3,
   "fields": {
     "course": 1,
@@ -124,7 +124,7 @@
   }
 },
 {
-  "model": "media_service.courseimage",
+  "model": "media_service.resource",
   "pk": 4,
   "fields": {
     "course": 1,
@@ -137,7 +137,7 @@
   }
 },
 {
-  "model": "media_service.courseimage",
+  "model": "media_service.resource",
   "pk": 5,
   "fields": {
     "course": 1,
@@ -157,51 +157,51 @@
   }
 },
 {
-  "model": "media_service.collectionimage",
+  "model": "media_service.collectionresource",
   "pk": 1,
   "fields": {
     "collection": 1,
-    "course_image": 1,
+    "resource": 1,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
 },
 {
-  "model": "media_service.collectionimage",
+  "model": "media_service.collectionresource",
   "pk": 2,
   "fields": {
     "collection": 1,
-    "course_image": 4,
+    "resource": 4,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
 },
 {
-  "model": "media_service.collectionimage",
+  "model": "media_service.collectionresource",
   "pk": 3,
   "fields": {
     "collection": 2,
-    "course_image": 2,
+    "resource": 2,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
 },
 {
-  "model": "media_service.collectionimage",
+  "model": "media_service.collectionresource",
   "pk": 4,
   "fields": {
     "collection": 2,
-    "course_image": 3,
+    "resource": 3,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
 },
 {
-  "model": "media_service.collectionimage",
+  "model": "media_service.collectionresource",
   "pk": 5,
   "fields": {
     "collection": 3,
-    "course_image": 4,
+    "resource": 4,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
