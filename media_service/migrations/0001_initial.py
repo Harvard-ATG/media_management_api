@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
-            name='Item',
+            name='CollectionResource',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
@@ -40,8 +40,8 @@ class Migration(migrations.Migration):
                 ('collection', models.ForeignKey(related_name='images', to='media_service.Collection')),
             ],
             options={
-                'verbose_name': 'item',
-                'verbose_name_plural': 'items',
+                'verbose_name': 'collection resource',
+                'verbose_name_plural': 'collection resources',
             },
             bases=(models.Model, media_service.models.SortOrderModelMixin),
         ),
@@ -140,7 +140,7 @@ class Migration(migrations.Migration):
             unique_together=set([('lti_context_id', 'lti_tool_consumer_instance_guid')]),
         ),
         migrations.AddField(
-            model_name='item',
+            model_name='collectionresource',
             name='resource',
             field=models.ForeignKey(related_name='collections', to='media_service.Resource'),
         ),

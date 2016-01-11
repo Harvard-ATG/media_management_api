@@ -203,20 +203,20 @@ class Collection(BaseModel, SortOrderModelMixin):
         collections = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
         return collections
 
-class Item(BaseModel, SortOrderModelMixin):
-    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='items')
-    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name='collectionitems')
+class CollectionResource(BaseModel, SortOrderModelMixin):
+    collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='resources')
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name='collection_resources')
     sort_order = models.IntegerField(default=0)
 
     class Meta:
-        verbose_name = 'item'
-        verbose_name_plural = 'items'
+        verbose_name = 'collection resource'
+        verbose_name_plural = 'collection resources'
         ordering = ['collection', 'sort_order', 'resource']
 
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"collection__pk": self.collection.pk})
-        super(Item, self).save(*args, **kwargs)
+        super(CollectionResource, self).save(*args, **kwargs)
 
     def __unicode__(self):
         return "{0}".format(self.id)

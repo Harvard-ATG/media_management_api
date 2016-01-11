@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.reverse import reverse
-from media_service.models import MediaStore, Course, Collection, Item, Resource
+from media_service.models import MediaStore, Course, Collection, CollectionResource, Resource
 from media_service.mediastore import MediaStoreUpload
 
 def resource_to_representation(resource):
@@ -40,28 +40,28 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         model = User
         fields = ('url', 'id', 'username', 'email', 'groups')
 
-class ItemSerializer(serializers.HyperlinkedModelSerializer):
+class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
     collection_id = serializers.PrimaryKeyRelatedField(queryset=Collection.objects.all())
     collection_url = serializers.HyperlinkedIdentityField(view_name="collection-detail", lookup_field="pk")
     course_image_id = serializers.PrimaryKeyRelatedField(queryset=Resource.objects.all(), source='resource_id')
     
     class Meta:
-        model = Item
+        model = CollectionResource
         fields = ('id', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
-        super(ItemSerializer, self).__init__(*args, **kwargs)
+        super(CollectionResourceSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
-        item = Item(
+        collection_resource = CollectionResource(
             collection=validated_data['collection_id'],
             resource=validated_data['course_image_id'],
         )
-        item.save()
-        return item
+        collection_resource.save()
+        return collection_resource
 
     def to_representation(self, instance):
-        data =  super(ItemSerializer, self).to_representation(instance)
+        data =  super(CollectionResourceSerializer, self).to_representation(instance)
         resource = instance.resource
         data.update({
             "type": 'collectionimages',
@@ -77,7 +77,7 @@ class ItemSerializer(serializers.HyperlinkedModelSerializer):
 
 class CollectionResourceIdsField(serializers.Field):
     def to_representation(self, obj):
-        course_image_ids = [item.resource_id for item in obj.items.all()]
+        course_image_ids = [item.resource_id for item in obj.resources.all()]
         return course_image_ids
 
     def to_internal_value(self, data):
@@ -105,7 +105,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         include = kwargs.pop('include', [])
         super(CollectionSerializer, self).__init__(*args, **kwargs)
         if 'images' in include:
-            self.fields['images'] = ItemSerializer(source="items", many=True, read_only=True)
+            self.fields['images'] = CollectionResourceSerializer(source="resources", many=True, read_only=True)
 
     def create(self, validated_data):
         collection = Collection(
@@ -126,9 +126,9 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             instance.description = validated_data['description']
         if 'course_image_ids' in validated_data:
             course_image_ids = validated_data['course_image_ids']
-            Item.objects.filter(collection__pk=instance.pk).delete()
+            CollectionResource.objects.filter(collection__pk=instance.pk).delete()
             for course_image_id in course_image_ids:
-                Item.objects.create(collection_id=instance.pk, resource_id=course_image_id)
+                CollectionResource.objects.create(collection_id=instance.pk, resource_id=course_image_id)
         instance.save()
         return Collection.objects.get(pk=instance.pk) # Get object fresh from DB to avoid cache problems
 

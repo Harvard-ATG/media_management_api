@@ -5,9 +5,9 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
-from media_service.models import Course, Collection, Resource, MediaStore, Item
+from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, \
-    CollectionSerializer, ItemSerializer
+    CollectionSerializer, CollectionResourceSerializer
 
 class APIRoot(APIView):
     def get(self, request, format=None):
@@ -46,7 +46,7 @@ To search for a course associated with an LTI context:
 Since one and only one instance of a course can exist with those two attributes, the response should
 be an empty list or a list with one object.
     '''
-    queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__items')
+    queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources')
     serializer_class = CourseSerializer
     
     def _get_lti_search_filters(self, request):
@@ -82,7 +82,7 @@ Collection Endpoints
 - `/collections/{pk}` Collection detail
 - `/collections/{pk}/images`  Lists a collection's images
     '''
-    queryset = Collection.objects.select_related('course').prefetch_related('items__resource')
+    queryset = Collection.objects.select_related('course').prefetch_related('resources__resource')
     serializer_class = CollectionSerializer
     
     def list(self, request, format=None):
@@ -137,35 +137,35 @@ class CourseImagesListView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class CollectionImagesListView(APIView):
-    serializer_class = ItemSerializer
+    serializer_class = CollectionResourceSerializer
     def get(self, request, pk=None, format=None):
-        items = Item.get_collection_images(pk)
-        serializer = ItemSerializer(items, many=True, context={'request': request})
+        collection_resources = CollectionResource.get_collection_images(pk)
+        serializer = CollectionResourceSerializer(collection_resources, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
         collection = get_object_or_404(Collection, pk=pk)
         data = []
-        for item in request.data:
-            item = item.copy()
-            item['collection_id'] = collection.pk
-            data.append(item)
-        serializer = ItemSerializer(data=data, many=True, context={'request': request})
+        for collection_resource in request.data:
+            collection_resource = collection_resource.copy()
+            collection_resource['collection_id'] = collection.pk
+            data.append(collection_resource)
+        serializer = CollectionResourceSerializer(data=data, many=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CollectionImagesDetailView(APIView):
-    serializer_class = ItemSerializer
+    serializer_class = CollectionResourceSerializer
     def get(self, request, pk=None, format=None):
-         item = get_object_or_404(Item, pk=pk)
-         serializer = ItemSerializer(item, context={'request': request})
+         collection_resource = get_object_or_404(CollectionResource, pk=pk)
+         serializer = CollectionResourceSerializer(collection_resource, context={'request': request})
          return Response(serializer.data)
     
     def delete(self, request, pk=None, format=None):
-        item = get_object_or_404(Item, pk=pk)
-        item.delete()
+        collection_resource = get_object_or_404(CollectionResource, pk=pk)
+        collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CourseImageUploadView(APIView):

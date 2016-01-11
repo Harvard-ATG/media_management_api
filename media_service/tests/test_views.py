@@ -2,7 +2,7 @@ import unittest
 from django.core.urlresolvers import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from media_service.models import MediaStore, Course, Collection, Resource, Item
+from media_service.models import MediaStore, Course, Collection, Resource, CollectionResource
 
 class TestCourseEndpoint(APITestCase):
     fixtures = ['test.json']
@@ -279,6 +279,6 @@ class TestCollectionEndpoint(APITestCase):
         for f in ('title', 'description', 'course_id'):
             self.assertEqual(response.data[f], body[f])
 
-        course_image_ids = collection_after_update.items.values_list('resource__pk', flat=True)
+        course_image_ids = collection_after_update.resources.values_list('resource__pk', flat=True)
         self.assertSequenceEqual(response.data['course_image_ids'], course_image_ids)
 
