@@ -222,7 +222,7 @@ LOGGING = {
         },
         'django.db': {
             'handlers': ['default', 'console'],
-            'level': 'DEBUG', # Set to DEBUG to see SQL output
+            'level': 'INFO', # Set to DEBUG to see SQL output
             'propagate': True,
         },
         'media_management_api': {
