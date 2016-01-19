@@ -27,7 +27,7 @@ class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         collection_resource = CollectionResource(
             collection=validated_data['collection_id'],
-            resource=validated_data['course_image_id'],
+            resource=validated_data['resource_id'],
         )
         collection_resource.save()
         return collection_resource
