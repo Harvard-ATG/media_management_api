@@ -42,7 +42,8 @@ class TestCourseEndpoint(APITestCase):
                         "image_width": None,
                         "image_height": None,
                         "image_url": None,
-                        "thumb_url": None
+                        "thumb_url": None,
+                        "iiif_base_url": None,
                     },
                 ],
                 "collections": [
