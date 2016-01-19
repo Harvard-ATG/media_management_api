@@ -88,6 +88,10 @@ class MediaStore(BaseModel):
             identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!        
         return identifier
 
+    def get_iiif_base_url(self):
+        identifier = self.get_iiif_identifier(encode=True)
+        return '{base_url}{identifier}'.format(base_url=IIIF_IMAGE_SERVER_URL, identifier=identifier)
+
     def get_s3_keyname(self):
         return "{prefix}/images/{pk}/{file_name}".format(prefix=AWS_S3_KEY_PREFIX, pk=self.pk, file_name=self.file_name)
 
@@ -168,11 +172,44 @@ class Resource(BaseModel, SortOrderModelMixin):
         if self.media_store:
             self.media_store.reference_count -= 1
             self.media_store.save() 
-        super(Resource, self).delete(*args, **kwargs)
+        super(Resource, self).delete(*args, **kwargs)    
+
+    def get_representation(self):
+        if self.media_store is None:
+            image_type = self.img_type
+            image_url = self.img_url
+            image_width = self.img_width
+            image_height = self.img_height
+            thumb_url = self.thumb_url
+            thumb_width = self.thumb_width
+            thumb_height = self.thumb_height
+            iiif_base_url = None
+        else:
+            thumb = self.media_store.get_image_thumb()
+            full = self.media_store.get_image_full()
+            iiif_base_url = self.media_store.get_iiif_base_url()
+            image_type = self.media_store.file_type
+            image_url = full['url']
+            image_width = full['width']
+            image_height = full['height']
+            thumb_url = thumb['url']
+            thumb_width = thumb['width']
+            thumb_height = thumb['height']
+        data = {
+            "image_type": image_type,
+            "image_width": image_width,
+            "image_height": image_height,
+            "image_url": image_url,
+            "thumb_width": thumb_width,
+            "thumb_height": thumb_height,
+            "thumb_url": thumb_url,
+            "iiif_base_url": iiif_base_url,
+        }
+        return data
+    
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)
-    
 
     @classmethod
     def get_course_images(cls, course_pk):
