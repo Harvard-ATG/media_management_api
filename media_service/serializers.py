@@ -5,35 +5,7 @@ from media_service.models import MediaStore, Course, Collection, CollectionResou
 from media_service.mediastore import MediaStoreUpload
 
 def resource_to_representation(resource):
-    if resource.media_store is None:
-        image_type = resource.img_type
-        image_url = resource.img_url
-        image_width = resource.img_width
-        image_height = resource.img_height
-        thumb_url = resource.thumb_url
-        thumb_width = resource.thumb_width
-        thumb_height = resource.thumb_height
-    else:
-        media_store = resource.media_store
-        thumb = media_store.get_image_thumb()
-        full = media_store.get_image_full()
-        image_type = media_store.file_type
-        image_url = full['url']
-        image_width = full['width']
-        image_height = full['height']
-        thumb_url = thumb['url']
-        thumb_width = thumb['width']
-        thumb_height = thumb['height']
-    data = {
-        "image_type": image_type,
-        "image_width": image_width,
-        "image_height": image_height,
-        "image_url": image_url,
-        "thumb_width": thumb_width,
-        "thumb_height": thumb_height,
-        "thumb_url": thumb_url,
-    }
-    return data
+    return resource.get_representation()
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -55,7 +27,7 @@ class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         collection_resource = CollectionResource(
             collection=validated_data['collection_id'],
-            resource=validated_data['course_image_id'],
+            resource=validated_data['resource_id'],
         )
         collection_resource.save()
         return collection_resource

@@ -8,6 +8,7 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, File
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, \
     CollectionSerializer, CollectionResourceSerializer
+from media_service.iiif import CollectionManifestController
 
 class APIRoot(APIView):
     def get(self, request, format=None):
@@ -71,6 +72,19 @@ be an empty list or a list with one object.
         serializer = CourseSerializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
 
+    @detail_route(methods=['get'])
+    def manifests(self, request, pk=None, format=None):
+        course = self.get_object()
+        manifests = []
+        for collection in course.collections.all():
+            url = reverse('collection-manifest', kwargs={"pk": collection.pk})
+            manifests.append({
+                "label": collection.title,
+                "url": request.build_absolute_uri(url),
+            })
+        return Response(manifests)
+    
+
 class CollectionViewSet(viewsets.ModelViewSet):
     '''
 A **collection** resource is a grouping of *images*.
@@ -95,6 +109,13 @@ Collection Endpoints
         include = ['images']
         serializer = CollectionSerializer(collection, context={'request': request}, include=include)
         return Response(serializer.data)
+
+    @detail_route(methods=['get'])
+    def manifest(self, request, pk=None, format=None):
+        collection = self.get_object()
+        collection_manifest_controller = CollectionManifestController(request, collection)
+        data = collection_manifest_controller.get_data()
+        return Response(data)
 
 class CourseCollectionsView(APIView):
     serializer_class = CollectionSerializer
