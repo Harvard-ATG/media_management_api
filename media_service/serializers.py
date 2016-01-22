@@ -153,8 +153,8 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
             "media_store": None,
             "upload_file_name": None,
         }
-        if 'upload' in request.FILES:
-            uploaded_file = request.FILES['upload']
+        if 'file' in request.FILES:
+            uploaded_file = request.FILES['file']
             result['upload_file_name'] = uploaded_file.name
             result['is_upload'] = True
             media_store_upload = MediaStoreUpload(uploaded_file)
