@@ -53,11 +53,10 @@ class CollectionResourceIdsField(serializers.Field):
         return course_image_ids
 
     def to_internal_value(self, data):
-        course_pk = self.parent.instance.course.pk
-        found = Resource.objects.filter(course__pk=course_pk, pk__in=data).distinct().values_list('pk', flat=True)
-        diff = list(set(data).difference(found))
+        valid_resource_ids = Resource.objects.filter(pk__in=data).distinct().values_list('pk', flat=True)
+        diff = list(set(data).difference(valid_resource_ids))
         if len(diff) != 0:
-            raise serializers.ValidationError("Invalid course_image_ids for course %s. Invalid: %s Valid: %s." % (course_pk, diff, found))
+            raise serializers.ValidationError("Invalid course_image_ids for course %s. Invalid: %s Valid: %s." % (course_pk, diff, valid_resource_ids))
         return data
 
     def get_attribute(self, obj):
@@ -86,6 +85,11 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             description=validated_data.get('description', ''),
         )
         collection.save()
+        if 'course_image_ids' in validated_data:
+            course_image_ids = validated_data['course_image_ids']
+            CollectionResource.objects.filter(collection__pk=collection.pk).delete()
+            for course_image_id in course_image_ids:
+                CollectionResource.objects.create(collection_id=collection.pk, resource_id=course_image_id)
         return collection
     
     def update(self, instance, validated_data):
