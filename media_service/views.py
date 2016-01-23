@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
@@ -117,11 +118,12 @@ Collection Endpoints
         data = collection_manifest_controller.get_data()
         return Response(data)
 
-class CourseCollectionsView(APIView):
+class CourseCollectionsView(GenericAPIView):
+    queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        collections = Collection.get_course_collections(course_pk)
+        collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         include = ['images']
         serializer = CollectionSerializer(collections, many=True, context={'request': request}, include=include)
         return Response(serializer.data)
@@ -137,12 +139,13 @@ class CourseCollectionsView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class CourseImagesListView(APIView):
+class CourseImagesListView(GenericAPIView):
     serializer_class = ResourceSerializer
+    queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        images = Resource.get_course_images(course_pk)
+        images = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         serializer = ResourceSerializer(images, many=True, context={'request': request})
         return Response(serializer.data)
 
