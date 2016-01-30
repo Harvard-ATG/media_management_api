@@ -47,7 +47,7 @@ def create_token(data):
         "user_profile": user.profile,
         "application": application
     }
-    recent_tokens = Token.objects.filter(**token_attrs).order_by('created')[0:1]
+    recent_tokens = Token.objects.filter(**token_attrs).order_by('-created')[0:1]
     if len(recent_tokens) == 0 or is_token_expired(recent_tokens[0]):
         token = Token(**token_attrs)
         token.save()
