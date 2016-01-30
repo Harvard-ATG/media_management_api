@@ -81,7 +81,7 @@ def get_or_create_user(user_id):
     return user_profile.user
 
 def is_token_valid(token, raise_exception=False):
-    return is_token_expired(token, raise_exception=raise_exception)
+    return not is_token_expired(token, raise_exception=raise_exception)
 
 def is_token_expired(token, raise_exception=False):
     if isinstance(token, Token):
