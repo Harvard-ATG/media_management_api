@@ -6,6 +6,7 @@ from .models import Application, Token
 
 import datetime
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,9 @@ class InvalidApplicationError(Exception):
     pass
 
 class InvalidTokenError(Exception):
+    pass
+
+class InvalidScopeError(Exception):
     pass
 
 def create_token(data):
@@ -28,11 +32,13 @@ def create_token(data):
     if is_valid_application(data['application_key'], raise_exception=True):
         application = Application.objects.get(key=data['application_key'])
 
+    # Validate the scope
+    scope = None
+    if is_valid_scope(data['scope'], raise_exception=True):
+        scope = data['scope']
+
      # Get the user object or create a new one if needed
     user = get_or_create_user(data['user_id'])
-    
-    # Use the scope as-is
-    scope = data['scope']
 
     # Try to reuse the most recent token for the user if it's still valid, otherwise
     # create a new token.
@@ -122,3 +128,26 @@ def get_access_token_from_request(request):
     if authorization.lower().startswith("bearer "):
         access_token = authorization.split(" ", 2)[1]
     return access_token
+
+def get_scope_from_request(request):
+    access_token = services.get_access_token_from_request(request)
+    try:
+        token = get_token(access_token)
+    except:
+        return None
+    return parse_scope(token.scope)
+
+def is_valid_scope(scope, raise_exception=False):
+    is_valid = bool(re.search(r'^(course)\.(\d+)\.(read|write)$', scope))
+    if not is_valid and raise_exception:
+        raise InvalidScopeError("Scope is invalid")
+    return is_valid
+
+def parse_scope(scope):
+    match = re.search(r'^(course)\.(\d+)\.(read|write)$', scope)
+    parsed = {
+        "target": match.group(1),
+        "id": match.group(2),
+        "permission": match.group(3),
+    }
+    return parsed

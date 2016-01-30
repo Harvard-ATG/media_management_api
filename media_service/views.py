@@ -7,7 +7,9 @@ from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
+from media_auth.services import get_scope_from_request
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, \
     CollectionSerializer, CollectionResourceSerializer
