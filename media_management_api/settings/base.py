@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'media_service',
+    'media_auth',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -248,6 +249,10 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser'
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+         'rest_framework.authentication.SessionAuthentication',
+         'media_auth.authentication.CustomTokenAuthentication',
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }

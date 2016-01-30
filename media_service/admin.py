@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MediaStore, Course, Collection, Resource, CollectionResource
+from .models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
 
 class CollectionsInline(admin.StackedInline):
     extra = 0
@@ -33,3 +33,4 @@ admin.site.register(Course, CourseAdmin)
 admin.site.register(Collection, CollectionAdmin)
 admin.site.register(Resource)
 admin.site.register(CollectionResource)
+admin.site.register(UserProfile)

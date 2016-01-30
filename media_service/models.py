@@ -109,15 +109,15 @@ class MediaStore(BaseModel):
         return url_format_str.format(base_url=IIIF_IMAGE_SERVER_URL, **iiif_spec)
 
 class UserProfile(BaseModel):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    lti_user_id = models.CharField(max_length=1024, unique=True, blank=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="profile", null=True, blank=True)
+    sis_user_id = models.CharField(max_length=60, unique=True, blank=True, null=True)
 
     class Meta:
         verbose_name = 'user_profile'
         verbose_name_plural = 'user_profiles'
 
     def __unicode__(self):
-        return "{0}:{1}".format(self.id, self.lti_user_id)
+        return "UserProfile:%s" % self.id
 
 class Course(BaseModel):
     title = models.CharField(max_length=255)
@@ -139,7 +139,7 @@ class Course(BaseModel):
 
 class Resource(BaseModel, SortOrderModelMixin):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
-    owner = models.ForeignKey(UserProfile, null=True)
+    owner = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='resources', null=True, blank=True)
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     is_upload = models.BooleanField(default=True, null=False)
     upload_file_name = models.CharField(max_length=4096, null=True)
@@ -152,7 +152,6 @@ class Resource(BaseModel, SortOrderModelMixin):
     thumb_height = models.PositiveIntegerField(null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    
     sort_order = models.IntegerField(default=0)
 
     class Meta:

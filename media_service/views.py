@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
+from rest_framework.permissions import IsAuthenticated
+
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, \
     CollectionSerializer, CollectionResourceSerializer
@@ -50,6 +52,7 @@ be an empty list or a list with one object.
     '''
     queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources')
     serializer_class = CourseSerializer
+    permission_classes = (IsAuthenticated,)
     
     def _get_lti_search_filters(self, request):
         lti_search = {}
@@ -99,6 +102,7 @@ Collection Endpoints
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource')
     serializer_class = CollectionSerializer
+    permission_classes = (IsAuthenticated,)
     
     def list(self, request, format=None):
         collections = self.get_queryset()
@@ -121,6 +125,8 @@ Collection Endpoints
 class CourseCollectionsView(GenericAPIView):
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request, pk=None, format=None):
         course_pk = pk
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
@@ -143,6 +149,8 @@ class CourseImagesListView(GenericAPIView):
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request, pk=None, format=None):
         course_pk = pk
         images = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
@@ -162,6 +170,8 @@ class CourseImagesListView(GenericAPIView):
     
 class CollectionImagesListView(APIView):
     serializer_class = CollectionResourceSerializer
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request, pk=None, format=None):
         collection_resources = CollectionResource.get_collection_images(pk)
         serializer = CollectionResourceSerializer(collection_resources, many=True, context={'request': request})
@@ -182,6 +192,8 @@ class CollectionImagesListView(APIView):
 
 class CollectionImagesDetailView(APIView):
     serializer_class = CollectionResourceSerializer
+    permission_classes = (IsAuthenticated,)
+
     def get(self, request, pk=None, format=None):
          collection_resource = get_object_or_404(CollectionResource, pk=pk)
          serializer = CollectionResourceSerializer(collection_resource, context={'request': request})
@@ -194,6 +206,8 @@ class CollectionImagesDetailView(APIView):
 
 class CourseImageUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = (IsAuthenticated,)
+
     def post(self, request, pk=None, format=None):
         instance = get_object_or_404(Resource, pk=pk)
         data = request.data.copy()
@@ -207,3 +221,5 @@ class CourseImageUploadView(APIView):
 class CourseImageViewSet(viewsets.ModelViewSet):
     queryset = Resource.objects.all()
     serializer_class = ResourceSerializer
+    permission_classes = (IsAuthenticated,)
+
