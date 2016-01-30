@@ -41,16 +41,16 @@ def create_token(request):
 
 @login_required
 @user_passes_test(lambda u: u and u.is_superuser)
-def check_token(request, token_key):
+def check_token(request, access_token):
     msg = "VALID"
     status = 200
-    if services.is_token_expired(token_key):
+    if services.is_token_expired(access_token):
         status = 404
         msg = "INVALID"
     return HttpResponse(msg, status=status)
 
 @login_required
 @user_passes_test(lambda u: u and u.is_superuser)
-def destroy_token(request, token_key):
-    services.destroy_token(token_key)
-    return HttpResponse("Deleted token key:%s" % (token_key))
+def destroy_token(request, access_token):
+    services.destroy_token(access_token)
+    return HttpResponse("Deleted token:%s" % (access_token))

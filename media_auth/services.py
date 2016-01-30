@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-TOKEN_EXPIRE = {"minutes": 1}
+TOKEN_EXPIRE = {"hours": 24}
 
 class InvalidApplicationError(Exception):
     pass
@@ -57,8 +57,8 @@ def create_token(data):
     logger.debug("Created token: %s" % result)
     return result
 
-def get_token(token_key):
-    return Token.objects.get(key=token_key)
+def get_token(access_token):
+    return Token.objects.get(key=access_token)
 
 def get_or_create_user(user_id):
     user_profiles = UserProfile.objects.filter(sis_user_id=user_id)
@@ -74,20 +74,20 @@ def get_or_create_user(user_id):
         user_profile.save()
     return user_profile.user
 
-def is_token_valid(token, raise_excetion=False):
+def is_token_valid(token, raise_exception=False):
     return is_token_expired(token, raise_exception=raise_exception)
 
 def is_token_expired(token, raise_exception=False):
     if isinstance(token, Token):
-        token_key = token.key
+        access_token = token.key
     else:
-        token_key = token
+        access_token = token
 
     try:
-        token = Token.objects.get(key=token_key)
+        token = Token.objects.get(key=access_token)
     except Token.DoesNotExist:
         if raise_exception:
-            raise InvalidTokenError("No token exists with key %s" % token_key)
+            raise InvalidTokenError("No such token: %s" % access_token)
         return True
 
     created = token.created
@@ -109,15 +109,15 @@ def is_valid_application(application_key, raise_exception=False):
         return False
     return True
 
-def destroy_token(token_key):
+def destroy_token(access_token):
     try:
-        Token.objects.get(key=token_key).delete()
+        Token.objects.get(key=access_token).delete()
     except:
         return True
     return True
 
 def get_access_token_from_request(request):
-    authorization = request.META.get('AUTHORIZATION', '')
+    authorization = request.META.get('HTTP_AUTHORIZATION', '')
     access_token = None
     if authorization.lower().startswith("bearer "):
         access_token = authorization.split(" ", 2)[1]

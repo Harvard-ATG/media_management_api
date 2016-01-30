@@ -5,7 +5,7 @@ from . import services
 
 class CustomTokenAuthentication(authentication.BaseAuthentication):
     def authenticate_header(self, request):
-        return 'Bearer'
+        return 'Bearer realm="api"'
     
     def authenticate(self, request):
         access_token = services.get_access_token_from_request(request)
