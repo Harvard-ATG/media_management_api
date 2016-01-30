@@ -130,7 +130,7 @@ def get_access_token_from_request(request):
     return access_token
 
 def get_scope_from_request(request):
-    access_token = services.get_access_token_from_request(request)
+    access_token = get_access_token_from_request(request)
     try:
         token = get_token(access_token)
     except:
