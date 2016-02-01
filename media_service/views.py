@@ -9,11 +9,13 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, File
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
-from media_auth.services import get_scope_from_request
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
-from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, \
-    CollectionSerializer, CollectionResourceSerializer
 from media_service.iiif import CollectionManifestController
+from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
+
+from media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
+from media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
+
 
 class APIRoot(APIView):
     def get(self, request, format=None):
@@ -52,24 +54,25 @@ To search for a course associated with an LTI context:
 Since one and only one instance of a course can exist with those two attributes, the response should
 be an empty list or a list with one object.
     '''
-    queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources')
+    queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources', 'resources__media_store')
     serializer_class = CourseSerializer
-    permission_classes = (IsAuthenticated,)
-    
-    def _get_lti_search_filters(self, request):
-        lti_search = {}
-        for k in ['lti_context_id', 'lti_tool_consumer_instance_guid']:
-            if k in request.GET:
-                lti_search[k] = request.GET[k]
-        return lti_search
+    permission_classes = (IsAuthenticated, CourseEndpointPermission)
+
+    def get_queryset(self):
+        queryset = super(CourseViewSet, self).get_queryset()
+        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
+        return queryset
     
     def list(self, request, format=None):
-        lti_search = self._get_lti_search_filters(request)
-        if len(lti_search.keys()) > 0:
-            courses = self.get_queryset().filter(**lti_search)
-        else:
-            courses = self.get_queryset()
-        serializer = CourseSerializer(courses, many=True, context={'request': request})
+        queryset = self.get_queryset()
+
+        # Filter queryset by LTI context params
+        lti_params = ('lti_context_id', 'lti_tool_consumer_instance_guid')
+        lti_filters = dict([(k, self.request.GET[k]) for k in lti_params if k in self.request.GET])
+        if len(lti_filters.keys()) > 0:
+            queryset = queryset.filter(**lti_filters)
+    
+        serializer = CourseSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
@@ -102,9 +105,14 @@ Collection Endpoints
 - `/collections/{pk}` Collection detail
 - `/collections/{pk}/images`  Lists a collection's images
     '''
-    queryset = Collection.objects.select_related('course').prefetch_related('resources__resource')
+    queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, CollectionEndpointPermission)
+
+    def get_queryset(self):
+        queryset = super(CollectionViewSet, self).get_queryset()
+        queryset = CollectionEndpointFilter(self).filter_queryset(queryset)
+        return queryset
     
     def list(self, request, format=None):
         collections = self.get_queryset()
@@ -127,7 +135,7 @@ Collection Endpoints
 class CourseCollectionsView(GenericAPIView):
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, CollectionEndpointPermission)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
@@ -151,7 +159,7 @@ class CourseImagesListView(GenericAPIView):
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, ResourceEndpointPermission)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
@@ -171,11 +179,12 @@ class CourseImagesListView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class CollectionImagesListView(APIView):
+    queryset = CollectionResource.objects.select_related('collection', 'resource')
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, pk=None, format=None):
-        collection_resources = CollectionResource.get_collection_images(pk)
+        collection_resources = self.get_queryset().filter(collection__pk=pk).order_by('sort_order')
         serializer = CollectionResourceSerializer(collection_resources, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -193,25 +202,27 @@ class CollectionImagesListView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CollectionImagesDetailView(APIView):
+    queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, pk=None, format=None):
-         collection_resource = get_object_or_404(CollectionResource, pk=pk)
+         collection_resource = self.get_object()
          serializer = CollectionResourceSerializer(collection_resource, context={'request': request})
          return Response(serializer.data)
     
     def delete(self, request, pk=None, format=None):
-        collection_resource = get_object_or_404(CollectionResource, pk=pk)
+        collection_resource = self.get_object()
         collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CourseImageUploadView(APIView):
+    queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, ResourceEndpointPermission)
 
     def post(self, request, pk=None, format=None):
-        instance = get_object_or_404(Resource, pk=pk)
+        instance = self.get_object()
         data = request.data.copy()
         data['course_id'] = instance.course.pk
         serializer = ResourceSerializer(data=data, instance=instance, context={'request': request})
@@ -221,7 +232,11 @@ class CourseImageUploadView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CourseImageViewSet(viewsets.ModelViewSet):
-    queryset = Resource.objects.all()
+    queryset = Resource.objects.select_related('course', 'media_store')
     serializer_class = ResourceSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, ResourceEndpointPermission)
 
+    def get_queryset(self):
+        queryset = super(CourseImageViewSet, self).get_queryset()
+        queryset = ResourceEndpointFilter(self).filter_queryset(queryset)
+        return queryset
