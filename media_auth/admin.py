@@ -7,7 +7,7 @@ class TokensInline(admin.StackedInline):
     model = Token
 
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'key', 'description', 'created')
+    list_display = ('id', 'client_id', 'client_secret', 'description', 'created')
     inlines = (TokensInline,)
 
 class TokenAdmin(admin.ModelAdmin):

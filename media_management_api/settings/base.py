@@ -236,6 +236,11 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'media_auth': {
+            'handlers': ['default', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 

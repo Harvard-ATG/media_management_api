@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from media_service.models import UserProfile
 from .models import Application, Token
+from .exceptions import InvalidApplicationError, InvalidTokenError, InvalidScopeError
 
 import datetime
 import logging
@@ -10,27 +11,29 @@ import re
 
 logger = logging.getLogger(__name__)
 
-TOKEN_EXPIRE = {"hours": 24}
+# Expiration time for tokens. Dictionary keys are intended
+# to match the arguments accepted by datetime.timedelta():
+#       https://docs.python.org/2/library/datetime.html#datetime.timedelta
+TOKEN_EXPIRE = {"minutes": 15}
 
-class InvalidApplicationError(Exception):
-    pass
+# Regex pattern to match token scope.
+# Examples:
+#   read:course:*       write:course:*
+#   read:course:1       write:course:1
+#   read:course:1,2,3   write:course:1,2,3
+SCOPE_PATTERN = r'^(?P<permission>read|write):(?P<target>course):(?P<object>\*|\d|(?:(?:\d,)+\d))$'
 
-class InvalidTokenError(Exception):
-    pass
 
-class InvalidScopeError(Exception):
-    pass
-
-def create_token(data):
+def obtain_token(data):
     # Check that the required data are present
-    required_data = ('application_key', 'user_id', 'scope')
+    required_data = ('client_id', 'client_secret', 'user_id', 'scope')
     if not all([k in data for k in required_data]):
         raise InvalidApplicationError("Missing required data. Must include: %s" % ", ".join(required_data))
     
     # Validate the application
     application = None
-    if is_valid_application(data['application_key'], raise_exception=True):
-        application = Application.objects.get(key=data['application_key'])
+    if is_valid_application(client_id=data['client_id'], client_secret=data['client_secret'], raise_exception=True):
+        application = Application.objects.get(client_id=data['client_id'], client_secret=data['client_secret'])
 
     # Validate the scope
     scope = None
@@ -80,6 +83,9 @@ def get_or_create_user(user_id):
         user_profile.save()
     return user_profile.user
 
+def assert_token_valid(token):
+    return is_token_valid(token, raise_exception=True)
+
 def is_token_valid(token, raise_exception=False):
     return not is_token_expired(token, raise_exception=raise_exception)
 
@@ -101,17 +107,18 @@ def is_token_expired(token, raise_exception=False):
     expiration = created + datetime.timedelta(**TOKEN_EXPIRE)
     if now > expiration:
         if raise_exception:
-            raise InvalidTokenError("Token has expired. Expired at: %s" % expiration)
+            logger.debug("Token %s expired at %s" % (token.pk, expiration))
+            raise InvalidTokenError("Token has expired")
         return True
 
     return False
 
-def is_valid_application(application_key, raise_exception=False):
+def is_valid_application(client_id=None, client_secret=None, raise_exception=False):
     try:
-        application = Application.objects.get(key=application_key)
+        application = Application.objects.get(client_id=client_id, client_secret=client_secret)
     except Application.DoesNotExist:
         if raise_exception:
-            raise InvalidApplicationError("Invalid application_key: %s" % application_key)
+            raise InvalidApplicationError("Invalid application.")
         return False
     return True
 
@@ -138,16 +145,12 @@ def get_scope_from_request(request):
     return parse_scope(token.scope)
 
 def is_valid_scope(scope, raise_exception=False):
-    is_valid = bool(re.search(r'^(course)\.(\d+)\.(read|write)$', scope))
+    is_valid = bool(re.search(SCOPE_PATTERN, scope))
     if not is_valid and raise_exception:
-        raise InvalidScopeError("Scope is invalid")
+        raise InvalidScopeError("Invalid scope.")
     return is_valid
 
 def parse_scope(scope):
-    match = re.search(r'^(course)\.(\d+)\.(read|write)$', scope)
-    parsed = {
-        "target": match.group(1),
-        "id": match.group(2),
-        "permission": match.group(3),
-    }
+    match = re.search(SCOPE_PATTERN, scope)
+    parsed = {k:match.group(k) for k in ['target', 'object', 'permission']}
     return parsed
