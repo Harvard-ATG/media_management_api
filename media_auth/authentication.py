@@ -14,7 +14,6 @@ class CustomTokenAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         access_token = get_access_token_from_request(request)
         if not access_token:
-            logger.debug("No access token found in request")
             return None
 
         try:

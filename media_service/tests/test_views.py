@@ -1,11 +1,17 @@
 import unittest
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
-from media_service.models import MediaStore, Course, Collection, Resource, CollectionResource
+from media_service.models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
 
 class TestCourseEndpoint(APITestCase):
     fixtures = ['test.json']
+
+    def setUp(self):
+        credentials = {"username": "testuser", "password": "testuser"}
+        self.testuser = User.objects.create_user(credentials['username'], 'testuser@localhost', credentials['password'])
+        self.testuser_credentials = credentials
 
     def get_example_item(self, detail=False):
         example_item = {
@@ -179,6 +185,11 @@ class TestCourseEndpoint(APITestCase):
     
 class TestCollectionEndpoint(APITestCase):
     fixtures = ['test.json']
+
+    def setUp(self):
+        credentials = {"username": "testuser", "password": "testuser"}
+        self.testuser = User.objects.create_user(credentials['username'], 'testuser@localhost', credentials['password'])
+        self.testuser_credentials = credentials
 
     def test_collection_list(self):
         collections = Collection.objects.all()
