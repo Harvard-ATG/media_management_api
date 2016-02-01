@@ -61,7 +61,7 @@ def obtain_token(data):
     result = {
         "access_token": token.key,
         "scope": token.scope,
-        "created": token.created.isoformat(),
+        "expires": TOKEN_EXPIRE.copy(),
     }
     logger.debug("Created token: %s" % result)
     return result
