@@ -9,17 +9,17 @@ SCOPE_READ = "read"
 SCOPE_WRITE = "write"
 
 class BaseScopePermission(BasePermission):
-    SCOPE = None
-    LOADED_SCOPE = False
-
     def __init__(self, *args, **kwargs):
         super(BaseScopePermission, self).__init__(*args, **kwargs)
+        self.scope = None
+        self.loaded_scope = False
     
     def has_permission(self, request, view):
         '''
         Implements has_permission().
         '''
         scope = self.get_scope_from_request(request)
+        logger.debug("has_permission scope:%s" % scope)
         if scope is None:
             return True
 
@@ -32,6 +32,7 @@ class BaseScopePermission(BasePermission):
         Implements has_object_permission().
         '''
         scope = self.get_scope_from_request(request)
+        logger.debug("has_object_permission scope:%s" % scope)
         if scope is None:
             return True
 
@@ -40,7 +41,7 @@ class BaseScopePermission(BasePermission):
         has_object_perm = self.has_scope_object_perm(request, view, obj)
         
         has_perm = (has_method_perm and has_target_perm and has_object_perm)
-        logger.debug("has_object_permission:%s (%s & %s & %s) scope:%s " % (has_perm, has_method_perm, has_target_perm, has_object_perm, scope))
+        logger.debug("has_object_permission:%s (%s & %s & %s)" % (has_perm, has_method_perm, has_target_perm, has_object_perm))
         
         return has_perm
 
@@ -69,16 +70,26 @@ class BaseScopePermission(BasePermission):
         return scope['object'] == '*'
     
     def get_scope_from_request(self, request):
-        cls = BaseScopePermission
-        if not cls.LOADED_SCOPE:
-            cls.scope = get_scope_from_request(request)
-            cls.LOADED_SCOPE = True
-        return cls.scope
+        if not self.loaded_scope:
+            self.scope = get_scope_from_request(request)
+            self.loaded_scope = True
+        return self.scope
 
 class CourseEndpointPermission(BaseScopePermission):
     """
     The request is authorized by the token scope.
     """
+    def has_permission(self, request, view):
+        scope = self.get_scope_from_request(request)
+        has_perm = super(CourseEndpointPermission, self).has_permission(request, view)
+        
+        # Special case for creating a new course
+        action = view.action_map.get(request.method.lower())
+        if action == "create":
+            has_perm = has_perm and (scope['object'] == '*')
+
+        return has_perm
+        
     def has_scope_object_perm(self, request, view, obj):
         scope = self.get_scope_from_request(request)
         has_perm = super(CourseEndpointPermission, self).has_scope_object_perm(request, view, obj)

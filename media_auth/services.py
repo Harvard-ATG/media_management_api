@@ -21,7 +21,7 @@ TOKEN_EXPIRE = {"minutes": 15}
 #   read:course:*       write:course:*
 #   read:course:1       write:course:1
 #   read:course:1,2,3   write:course:1,2,3
-SCOPE_PATTERN = r'^(?P<permission>read|write):(?P<target>course):(?P<object>\*|\d|(?:(?:\d,)+\d))$'
+SCOPE_PATTERN = r'^(?P<permission>read|write):(?P<target>course):(?P<object>\*|\d+|(?:(?:\d+,)+\d+))$'
 
 
 def obtain_token(data):
@@ -138,9 +138,20 @@ def get_access_token_from_request(request):
 
 def get_scope_from_request(request):
     access_token = get_access_token_from_request(request)
-    try:
-        token = get_token(access_token)
-    except:
+    if access_token is None:
+        return None
+
+    token_attr = "_access_token"
+    if hasattr(request, token_attr):
+        token = getattr(request, token_attr, None)
+    else:
+        try:
+            token = get_token(access_token)
+        except:
+            token = None
+        setattr(request, token_attr, token)
+
+    if token is None:
         return None
     return parse_scope(token.scope)
 
