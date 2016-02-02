@@ -60,6 +60,7 @@ def obtain_token(data):
     # Return the token info
     token_response = {
         "access_token": token.key,
+        "scope": token.scope,
         "expires": TOKEN_EXPIRE.copy(),
     }
     logger.debug("Obtained token: %s" % token_response)

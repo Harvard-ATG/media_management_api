@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import PermissionDenied
 
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
@@ -56,7 +56,7 @@ be an empty list or a list with one object.
     '''
     queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources', 'resources__media_store')
     serializer_class = CourseSerializer
-    permission_classes = (IsAuthenticated, CourseEndpointPermission)
+    permission_classes = (CourseEndpointPermission,)
 
     def get_queryset(self):
         queryset = super(CourseViewSet, self).get_queryset()
@@ -107,7 +107,7 @@ Collection Endpoints
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (IsAuthenticated, CollectionEndpointPermission)
+    permission_classes = (CollectionEndpointPermission,)
 
     def get_queryset(self):
         queryset = super(CollectionViewSet, self).get_queryset()
@@ -135,7 +135,7 @@ Collection Endpoints
 class CourseCollectionsView(GenericAPIView):
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (IsAuthenticated, CollectionEndpointPermission)
+    permission_classes = (CollectionEndpointPermission,)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
@@ -159,7 +159,7 @@ class CourseImagesListView(GenericAPIView):
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    permission_classes = (IsAuthenticated, ResourceEndpointPermission)
+    permission_classes = (ResourceEndpointPermission,)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
@@ -178,8 +178,8 @@ class CourseImagesListView(GenericAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-class CollectionImagesListView(APIView):
-    queryset = CollectionResource.objects.select_related('collection', 'resource')
+class CollectionImagesListView(GenericAPIView):
+    queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -201,7 +201,7 @@ class CollectionImagesListView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class CollectionImagesDetailView(APIView):
+class CollectionImagesDetailView(GenericAPIView):
     queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsAuthenticated,)
@@ -216,10 +216,10 @@ class CollectionImagesDetailView(APIView):
         collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class CourseImageUploadView(APIView):
+class CourseImageUploadView(GenericAPIView):
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = (IsAuthenticated, ResourceEndpointPermission)
+    permission_classes = (ResourceEndpointPermission,)
 
     def post(self, request, pk=None, format=None):
         instance = self.get_object()
@@ -234,7 +234,7 @@ class CourseImageUploadView(APIView):
 class CourseImageViewSet(viewsets.ModelViewSet):
     queryset = Resource.objects.select_related('course', 'media_store')
     serializer_class = ResourceSerializer
-    permission_classes = (IsAuthenticated, ResourceEndpointPermission)
+    permission_classes = (ResourceEndpointPermission,)
 
     def get_queryset(self):
         queryset = super(CourseImageViewSet, self).get_queryset()
