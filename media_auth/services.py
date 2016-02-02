@@ -132,7 +132,7 @@ def destroy_token(access_token):
 def get_access_token_from_request(request):
     authorization = request.META.get('HTTP_AUTHORIZATION', '')
     access_token = None
-    if authorization.lower().startswith("bearer "):
+    if authorization.lower().startswith("token "):
         access_token = authorization.split(" ", 2)[1]
     return access_token
 

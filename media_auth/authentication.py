@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class CustomTokenAuthentication(authentication.BaseAuthentication):
     def authenticate_header(self, request):
-        return 'Bearer realm="api"'
+        return 'Token '
     
     def authenticate(self, request):
         access_token = get_access_token_from_request(request)
