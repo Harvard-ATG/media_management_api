@@ -58,13 +58,12 @@ def obtain_token(data):
         token = recent_tokens[0]
 
     # Return the token info
-    result = {
+    token_response = {
         "access_token": token.key,
-        "scope": token.scope,
         "expires": TOKEN_EXPIRE.copy(),
     }
-    logger.debug("Created token: %s" % result)
-    return result
+    logger.debug("Obtained token: %s" % token_response)
+    return token_response
 
 def get_token(access_token):
     return Token.objects.get(key=access_token)
