@@ -81,6 +81,9 @@ class CourseEndpointPermission(BaseScopePermission):
     """
     def has_permission(self, request, view):
         scope = self.get_scope_from_request(request)
+        if scope is None:
+            return True
+
         has_perm = super(CourseEndpointPermission, self).has_permission(request, view)
         
         # Special case for creating a new course
