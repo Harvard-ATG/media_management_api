@@ -18,7 +18,8 @@ EMAIL_HOST_PASSWORD = SECURE_SETTINGS.get('email_host_password', '')
 
 # CORS heaed
 CORS_ORIGIN_REGEX_WHITELIST = (
-    '^(https?://)?(\w+\.)*harvard\.edu$',
+    #'^(https?://)?(\w+\.)*harvard\.edu$',
+    '^((?:https?:\/\/)?(?:[^.]+\.)+harvard\.edu)$',
 )
 
 CORS_ALLOW_HEADERS = (
