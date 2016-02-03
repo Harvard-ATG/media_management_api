@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 # Expiration time for tokens. Dictionary keys are intended
 # to match the arguments accepted by datetime.timedelta():
 #       https://docs.python.org/2/library/datetime.html#datetime.timedelta
-TOKEN_EXPIRE = {"minutes": 15}
+TOKEN_EXPIRE = {"hours": 6}
+
+# Token half-life used when obtaining recent tokens to provide a minimum valid time.
+TOKEN_HALF_LIFE = {"hours": 3}
 
 # Regex pattern to match token scope.
 # Examples:
@@ -51,7 +54,7 @@ def obtain_token(data):
         "application": application
     }
     recent_tokens = Token.objects.filter(**token_attrs).order_by('-created')[0:1]
-    if len(recent_tokens) == 0 or is_token_expired(recent_tokens[0]):
+    if len(recent_tokens) == 0 or is_token_expired(recent_tokens[0]) or is_token_past_half_life(recent_tokens[0]):
         token = Token(**token_attrs)
         token.save()
     else:
@@ -62,12 +65,19 @@ def obtain_token(data):
         "access_token": token.key,
         "scope": token.scope,
         "expires": TOKEN_EXPIRE.copy(),
+        "scope": token.scope,
     }
     logger.debug("Obtained token: %s" % token_response)
     return token_response
 
 def get_token(access_token):
     return Token.objects.get(key=access_token)
+
+def get_token_expiration(token):
+    return token.created + datetime.timedelta(**TOKEN_EXPIRE)
+
+def get_token_half_life(token):
+    return token.created + datetime.timedelta(**TOKEN_HALF_LIFE)
 
 def get_or_create_user(user_id):
     user_profiles = UserProfile.objects.filter(sis_user_id=user_id)
@@ -90,28 +100,27 @@ def is_token_valid(token, raise_exception=False):
     return not is_token_expired(token, raise_exception=raise_exception)
 
 def is_token_expired(token, raise_exception=False):
-    if isinstance(token, Token):
-        access_token = token.key
-    else:
-        access_token = token
+    if not isinstance(token, Token):
+        try:
+            token = Token.objects.get(key=token)
+        except Token.DoesNotExist:
+            if raise_exception:
+                raise InvalidTokenError("No such token: %s" % access_token)
+            return True
 
-    try:
-        token = Token.objects.get(key=access_token)
-    except Token.DoesNotExist:
-        if raise_exception:
-            raise InvalidTokenError("No such token: %s" % access_token)
-        return True
-
-    created = token.created
     now = timezone.now()
-    expiration = created + datetime.timedelta(**TOKEN_EXPIRE)
+    expiration = get_token_expiration(token)
     if now > expiration:
         if raise_exception:
             logger.debug("Token %s expired at %s" % (token.pk, expiration))
             raise InvalidTokenError("Token has expired")
         return True
-
     return False
+
+def is_token_past_half_life(token):
+    now = timezone.now()
+    half_life = get_token_half_life(token)
+    return now > half_life
 
 def is_valid_application(client_id=None, client_secret=None, raise_exception=False):
     try:
