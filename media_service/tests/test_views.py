@@ -1,11 +1,18 @@
 import unittest
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
-from media_service.models import MediaStore, Course, Collection, Resource, CollectionResource
+from media_service.models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
 
 class TestCourseEndpoint(APITestCase):
     fixtures = ['test.json']
+
+    def setUp(self):
+        self.credentials = {"username": "testuser", "password": "testuser"}
+        self.testuser = User.objects.create(username=self.credentials['username'])
+        self.testuser.set_password(self.credentials['password'])
+        self.client.force_authenticate(self.testuser)
 
     def get_example_item(self, detail=False):
         example_item = {
@@ -67,6 +74,7 @@ class TestCourseEndpoint(APITestCase):
     def test_course_list(self):
         courses = Course.objects.all()
         url = reverse('course-list')
+        self.client.login(username=self.credentials['username'], password=self.credentials['password'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(courses))
@@ -179,6 +187,12 @@ class TestCourseEndpoint(APITestCase):
     
 class TestCollectionEndpoint(APITestCase):
     fixtures = ['test.json']
+
+    def setUp(self):
+        self.credentials = {"username": "testuser", "password": "testuser"}
+        self.testuser = User.objects.create(username=self.credentials['username'])
+        self.testuser.set_password(self.credentials['password'])
+        self.client.force_authenticate(self.testuser)
 
     def test_collection_list(self):
         collections = Collection.objects.all()
