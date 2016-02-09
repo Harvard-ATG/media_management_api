@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User, Group
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionResource, Resource
 from media_service.mediastore import MediaStoreUpload
@@ -152,18 +152,24 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
     def handle_file_upload(self, request):
-        result = {
-            "is_upload": False,
-            "media_store": None,
-            "upload_file_name": None,
-        }
-        if 'file' in request.FILES:
-            uploaded_file = request.FILES['file']
-            result['upload_file_name'] = uploaded_file.name
+        result = {}
+        files = request.FILES.keys()
+        if len(files) == 0:
+            result['is_upload'] = False
+            result['upload_file_name'] = None
+            result['media_store'] = None
+        elif len(files) == 1:
+            file_key = files[0]
+            uploaded_file = request.FILES[file_key]
             result['is_upload'] = True
+            result['upload_file_name'] = uploaded_file.name
             media_store_upload = MediaStoreUpload(uploaded_file)
             if media_store_upload.is_valid():
                 result['media_store'] = media_store_upload.save()
+            else:
+                raise exceptions.ValidationError("Error uploading file. %s" % media_store_upload.getErrors())
+        elif len(files) > 1:
+            raise exceptions.ValidationError("Error handling multiple files: operation not supported.")
         return result
 
     def to_representation(self, instance):
