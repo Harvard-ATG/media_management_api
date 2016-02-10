@@ -84,16 +84,16 @@ class MediaStoreUpload:
         '''
         Returns true if the uploaded file is valid, false otherwise.
         '''
-        self.validateImageOpens()
         self.validateImageExtension()
-        logger.debug("is_valid: %s errors: %s" % (self.is_valid, self.getErrors()))
+        self.validateImageOpens()
+        logger.debug("is_valid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
     
     def error(self, name, error):
         '''
         Saves a validation error.
         '''
-        self.is_valid = False
+        self._is_valid = False
         self._error[name] = error
     
     def getErrors(self):
