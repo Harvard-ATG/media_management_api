@@ -176,14 +176,14 @@ class TestMediaStoreUpload(unittest.TestCase):
         test_file = self.test_files['test.badextension']
         media_store_upload = self.createMediaStoreUpload(test_file)
         self.assertFalse(media_store_upload.validateImageExtension())
-        self.assertFalse(media_store_upload.is_valid())
+        self.assertFalse(media_store_upload.isValid())
     
     def testInvalidImage(self):
         test_file = self.test_files['empty.jpg']
         media_store_upload = self.createMediaStoreUpload(test_file)
         self.assertTrue(media_store_upload.validateImageExtension())
         self.assertFalse(media_store_upload.validateImageOpens())
-        self.assertFalse(media_store_upload.is_valid())
+        self.assertFalse(media_store_upload.isValid())
     
     def testImageJpegExtensionNormalized(self):
         test_file = self.test_files['empty.jpeg']

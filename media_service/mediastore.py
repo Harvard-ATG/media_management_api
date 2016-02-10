@@ -80,13 +80,13 @@ class MediaStoreUpload:
             self.saveToBucket()
         return self.instance
 
-    def is_valid(self):
+    def isValid(self):
         '''
         Returns true if the uploaded file is valid, false otherwise.
         '''
         self.validateImageExtension()
         self.validateImageOpens()
-        logger.debug("is_valid: %s errors: %s" % (self._is_valid, self.getErrors()))
+        logger.debug("isValid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
     
     def error(self, name, error):
