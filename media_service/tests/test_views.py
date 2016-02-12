@@ -32,7 +32,6 @@ class TestCourseEndpoint(APITestCase):
                 "images": [
                     {
                         "url": "http://localhost:8000/course-images/1",
-                        "upload_url": "http://localhost:8000/course-images/1/upload",
                         "id": 1,
                         "course_id": 1,
                         "title": "Example Image",
