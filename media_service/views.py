@@ -16,6 +16,9 @@ from media_service.serializers import UserSerializer, CourseSerializer, Resource
 from media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
 from media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class APIRoot(APIView):
     def get(self, request, format=None):
@@ -177,9 +180,9 @@ class CourseImagesListView(GenericAPIView):
             raise exceptions.APIException("Error: no files uploaded")
 
         response_data = []
-        print "file_uploads=%s" % request.FILES.getlist(file_param)
+        logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
         for file_upload in request.FILES.getlist(file_param):
-            print "processing: %s" % (file_upload.name)
+            logger.debug("Processing file upload: %s" % file_upload.name)
             data = request.data.copy()
             data['course_id'] = course.pk
             serializer = ResourceSerializer(data=data, context={'request': request}, file_upload=file_upload)
@@ -187,6 +190,7 @@ class CourseImagesListView(GenericAPIView):
                 serializer.save()
                 response_data.append(serializer.data)
             else:
+                logger.error(serializer.errors)
                 return Response(response_data + [serializer.errors], status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
     
