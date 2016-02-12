@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, exceptions
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
@@ -16,6 +16,9 @@ from media_service.serializers import UserSerializer, CourseSerializer, Resource
 from media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
 from media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class APIRoot(APIView):
     def get(self, request, format=None):
@@ -170,13 +173,26 @@ class CourseImagesListView(GenericAPIView):
     def post(self, request, pk=None, format=None):
         course_pk = pk
         course = get_object_or_404(Course, pk=pk)
-        data = request.data.copy()
-        data['course_id'] = course.pk
-        serializer = ResourceSerializer(data=data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        file_param = 'file'
+        if file_param not in request.FILES:
+            raise exceptions.APIException("Error: missing '%s' parameter in upload" % file_param)
+        elif len(request.FILES) == 0:
+            raise exceptions.APIException("Error: no files uploaded")
+
+        response_data = []
+        logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
+        for file_upload in request.FILES.getlist(file_param):
+            logger.debug("Processing file upload: %s" % file_upload.name)
+            data = request.data.copy()
+            data['course_id'] = course.pk
+            serializer = ResourceSerializer(data=data, context={'request': request}, file_upload=file_upload)
+            if serializer.is_valid():
+                serializer.save()
+                response_data.append(serializer.data)
+            else:
+                logger.error(serializer.errors)
+                return Response(response_data + [serializer.errors], status=status.HTTP_400_BAD_REQUEST)
+        return Response(response_data, status=status.HTTP_201_CREATED)
     
 class CollectionImagesListView(GenericAPIView):
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
@@ -215,21 +231,6 @@ class CollectionImagesDetailView(GenericAPIView):
         collection_resource = self.get_object()
         collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-class CourseImageUploadView(GenericAPIView):
-    queryset = Resource.objects.select_related('course', 'media_store')
-    parser_classes = (MultiPartParser, FormParser)
-    permission_classes = (ResourceEndpointPermission,)
-
-    def post(self, request, pk=None, format=None):
-        instance = self.get_object()
-        data = request.data.copy()
-        data['course_id'] = instance.course.pk
-        serializer = ResourceSerializer(data=data, instance=instance, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CourseImageViewSet(viewsets.ModelViewSet):
     queryset = Resource.objects.select_related('course', 'media_store')

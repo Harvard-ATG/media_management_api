@@ -15,7 +15,25 @@ class TestMediaStoreUpload(unittest.TestCase):
             # image content from: http://dummyimage.com/24x24/000/fff&text=Test
             'content': base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABgAAAAYBAMAAAASWSDLAAAAFVBMVEUAAAD///8fHx9fX19/f38/Pz+fn5+WwvWOAAAAPElEQVQYlWNgGHjAZGIMocEkswKYYoFxjA2UTdVMIRxmBSMjuAyLsRGzEZwD0gLjMLkaKBuzmsKMp4WbAVr9BJo70GnDAAAAAElFTkSuQmCC'),
             'dimensions': {'w': 24,'h': 24},
-        }
+        },
+        'test.badextension': {
+            'filename': 'test.badextension',
+            'extension': 'badextension',
+            'content-type': None,
+            'content': None
+        },
+        'empty.jpg': {
+            'filename': 'test.jpg',
+            'extension': 'jpg',
+            'content-type': 'image/jpeg',
+            'content': None
+        },
+        'empty.jpeg': {
+            'filename': 'test.jpeg',
+            'extension': 'jpg',
+            'content-type': 'image/jpeg',
+            'content': None
+        },
     }
 
     def setUp(self):
@@ -153,3 +171,23 @@ class TestMediaStoreUpload(unittest.TestCase):
         
         self.assertEqual(r1.pk, r2.pk)
         r2.delete()
+    
+    def testInvalidExtension(self):
+        test_file = self.test_files['test.badextension']
+        media_store_upload = self.createMediaStoreUpload(test_file)
+        self.assertFalse(media_store_upload.validateImageExtension())
+        self.assertFalse(media_store_upload.isValid())
+    
+    def testInvalidImage(self):
+        test_file = self.test_files['empty.jpg']
+        media_store_upload = self.createMediaStoreUpload(test_file)
+        self.assertTrue(media_store_upload.validateImageExtension())
+        self.assertFalse(media_store_upload.validateImageOpens())
+        self.assertFalse(media_store_upload.isValid())
+    
+    def testImageJpegExtensionNormalized(self):
+        test_file = self.test_files['empty.jpeg']
+        media_store_upload = self.createMediaStoreUpload(test_file)
+        normalized_jpeg_extension = "jpg"
+        self.assertEqual(media_store_upload.getFileExtension(), normalized_jpeg_extension)
+        self.assertTrue(media_store_upload.validateImageExtension())

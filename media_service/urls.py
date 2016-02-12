@@ -52,7 +52,6 @@ urlpatterns = [
     url(r'^collection-images/(?P<pk>\d+)$', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
     url(r'^images$', image_list, name='image-list'),
     url(r'^images/(?P<pk>\d+)$', image_detail, name='image-detail'),
-    url(r'^images/(?P<pk>\d+)/upload$', views.CourseImageUploadView.as_view(), name='image-upload'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User, Group
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionResource, Resource
 from media_service.mediastore import MediaStoreUpload
@@ -116,54 +116,55 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
 class ResourceSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
-    upload_url = serializers.HyperlinkedIdentityField(view_name="image-upload", lookup_field="pk")
     description = serializers.CharField(max_length=None, required=False)
 
     class Meta:
         model = Resource
-        fields = ('url', 'upload_url', 'id', 'course_id', 'title', 'description', 'sort_order', 'upload_file_name', 'created', 'updated')
+        fields = ('url', 'id', 'course_id', 'title', 'description', 'sort_order', 'upload_file_name', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
+        self.file_upload = kwargs.pop('file_upload', None)
         super(ResourceSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
-        request = self.context['request']
-        result = self.handle_file_upload(request)
-        resource_attrs = {
-            "course": validated_data['course_id'],
-            "title": validated_data['title'],
-            "description": validated_data.get('description', ''),
-            "media_store": result['media_store'],
-            "upload_file_name": result['upload_file_name'],
-        }
+        course_id = validated_data['course_id']
+        title = validated_data['title']
+        description = validated_data.get('description', '')
 
+        upload_result = self.handle_file_upload()
+        resource_attrs = {
+            "course": course_id,
+            "title": title,
+            "description": description,
+            "media_store": upload_result['media_store'],
+            "upload_file_name": upload_result['upload_file_name'],
+            "is_upload": upload_result['is_upload'],
+        }
         resource = Resource(**resource_attrs)
         resource.save()
-
         return resource
 
     def update(self, instance, validated_data):
-        request = self.context['request']
-        result = self.handle_file_upload(request)
-        instance.media_store = result['media_store']
-        instance.upload_file_name = result['upload_file_name']
-        instance.is_upload = result['is_upload']
+        instance.title = validated_data.get('title', instance.title)
+        instance.description = validated_data.get('description', instance.description)
+        instance.sort_order = validated_data.get('sort_order', instance.sort_order)
         instance.save()
         return instance
 
-    def handle_file_upload(self, request):
+    def handle_file_upload(self):
+        if not self.file_upload:
+            return {}
+
+        media_store_upload = MediaStoreUpload(self.file_upload)
+        if not media_store_upload.isValid():
+            raise exceptions.ValidationError("Failed to upload file '%s'. Error: %s" % (self.file_upload.name, media_store_upload.getErrors()))
+
+        media_store_instance = media_store_upload.save()
         result = {
-            "is_upload": False,
-            "media_store": None,
-            "upload_file_name": None,
+            'media_store': media_store_instance,
+            'is_upload': True,
+            'upload_file_name': self.file_upload.name,
         }
-        if 'file' in request.FILES:
-            uploaded_file = request.FILES['file']
-            result['upload_file_name'] = uploaded_file.name
-            result['is_upload'] = True
-            media_store_upload = MediaStoreUpload(uploaded_file)
-            if media_store_upload.is_valid():
-                result['media_store'] = media_store_upload.save()
         return result
 
     def to_representation(self, instance):
