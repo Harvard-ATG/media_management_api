@@ -154,7 +154,7 @@ class ResourceEndpointPermission(BaseScopePermission):
     The request is authorized by the token scope.
     """
     def has_scope_object_perm(self, request, view, obj, scope):
-        has_perm = super(CollectionEndpointPermission, self).has_scope_object_perm(request, view, obj, scope)
+        has_perm = super(ResourceEndpointPermission, self).has_scope_object_perm(request, view, obj, scope)
         return has_perm or (str(scope['object']) == str(obj.course.pk))
 
 class CollectionResourceEndpointPermission(BaseScopePermission):
