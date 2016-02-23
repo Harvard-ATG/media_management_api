@@ -33,9 +33,9 @@ class IIIFManifestTest(unittest.TestCase):
 
     def get_images_list(self):
         images = [
-            {'id': 1, 'is_link': False, 'url': 'http://localhost:8000/loris/foo.jpg', 'label': 'foo.jpg'},
-            {'id': 2, 'is_link': False, 'url': 'http://localhost:8000/loris/bar.jpg', 'label': 'bar.jpg'},
-            {'id': 3, 'is_link': True, 'url': 'http://my.link/image.jpg', 'label': 'image.jpg'},
+            {'id': 1, 'is_link': False, 'url': 'http://localhost:8000/loris/foo.jpg', 'label': 'foo.jpg', 'description': '', 'metadata': []},
+            {'id': 2, 'is_link': False, 'url': 'http://localhost:8000/loris/bar.jpg', 'label': 'bar.jpg', 'description': '', 'metadata': []},
+            {'id': 3, 'is_link': True, 'url': 'http://my.link/image.jpg', 'label': 'image.jpg', 'description': '', 'metadata': []},
         ]
         return images
 

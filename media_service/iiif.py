@@ -20,12 +20,15 @@ class CollectionManifestController(object):
         for collection_resource in collection_resources:
             resource = collection_resource.resource
             data = resource.get_representation()
+            metadata = resource.load_metadata()
             url = data['iiif_base_url']
             width = data['image_width']
             height = data['image_height']
             images.append({
                 "id": resource.id,
                 "label": resource.title,
+                "description": resource.description,
+                "metadata": metadata,
                 "is_link": not resource.is_upload,
                 "width": width,
                 "height": height,
@@ -140,6 +143,8 @@ class IIIFManifest(IIIFObject):
             if not img['is_link']:
                 can = seq.add_canvas(img['id'])
                 can.set_label(img['label'])
+                can.set_description(img['description'])
+                can.set_metadata(img['metadata'])
                 can.add_image({
                     'id': img['id'],
                     'url': img['url'],
@@ -228,6 +233,8 @@ class IIIFCanvas(IIIFObject):
         self.manifest = manifest
         self.id = canvas_id
         self.label = 'Image'
+        self.description = ''
+        self.metadata = []
         self.width = 100 # TODO: get real width
         self.height = 100 # TODO: get real height
         self.resource = None
@@ -242,7 +249,13 @@ class IIIFCanvas(IIIFObject):
     
     def set_label(self, label):
         self.label = label
-        
+    
+    def set_description(self, description):
+        self.description = description
+    
+    def set_metadata(self, metadata):
+        self.metadata = metadata
+
     def build_url(self):
         return self.manifest.build_absolute_uri('iiif:canvas', {
             'manifest_id': self.manifest.id,
@@ -261,6 +274,10 @@ class IIIFCanvas(IIIFObject):
                 "on": self.build_url(),
             }],
         }
+        if self.description:
+            canvas['description'] = self.description
+        if self.metadata:
+            canvas['metadata'] = self.metadata
         if self.width is not None and self.height is not None:
             canvas['width'] = self.width
             canvas['height'] = self.height

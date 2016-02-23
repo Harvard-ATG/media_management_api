@@ -36,6 +36,7 @@ class TestCourseEndpoint(APITestCase):
                         "course_id": 1,
                         "title": "Example Image",
                         "description": "",
+                        "metadata": "[]",
                         "sort_order": 0,
                         "upload_file_name": None,
                         "created": "2015-12-15T15:42:33.443434Z",
