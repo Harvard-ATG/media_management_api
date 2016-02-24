@@ -257,6 +257,7 @@ class IIIFCanvas(IIIFObject):
             "label": self.label,
             "images": [{
                 "@type": "oa:Annotation",
+                "motivation": "sc:painting",
                 "resource": self.resource.to_dict(),
                 "on": self.build_url(),
             }],
