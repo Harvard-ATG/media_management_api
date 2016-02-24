@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import Max
 from django.conf import settings
 import urllib
+import json
 
 # Required settings
 IIIF_IMAGE_SERVER_URL = settings.IIIF_IMAGE_SERVER_URL
@@ -143,15 +144,16 @@ class Resource(BaseModel, SortOrderModelMixin):
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     is_upload = models.BooleanField(default=True, null=False)
     upload_file_name = models.CharField(max_length=4096, null=True)
-    img_type = models.CharField(max_length=128, null=True)
-    img_url = models.CharField(max_length=4096, null=True)
-    img_width = models.PositiveIntegerField(null=True)
-    img_height = models.PositiveIntegerField(null=True)
-    thumb_url = models.CharField(max_length=4096, null=True)
-    thumb_width = models.PositiveIntegerField(null=True)
-    thumb_height = models.PositiveIntegerField(null=True)
+    img_type = models.CharField(max_length=128, null=True, blank=True)
+    img_url = models.CharField(max_length=4096, null=True, blank=True)
+    img_width = models.PositiveIntegerField(null=True, blank=True)
+    img_height = models.PositiveIntegerField(null=True, blank=True)
+    thumb_url = models.CharField(max_length=4096, null=True, blank=True)
+    thumb_width = models.PositiveIntegerField(null=True, blank=True)
+    thumb_height = models.PositiveIntegerField(null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    metadata = models.TextField(blank=True, default=json.dumps([]))
     sort_order = models.IntegerField(default=0)
 
     class Meta:
@@ -206,6 +208,11 @@ class Resource(BaseModel, SortOrderModelMixin):
         }
         return data
     
+    def load_metadata(self):
+        try:
+            return json.loads(self.metadata)
+        except:
+            return []
 
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.title)

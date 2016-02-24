@@ -3,6 +3,7 @@ from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionResource, Resource
 from media_service.mediastore import MediaStoreUpload
+import json
 
 def resource_to_representation(resource):
     return resource.get_representation()
@@ -113,14 +114,37 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         data['type'] = 'collections'
         return data
 
+def metadata_validator(value):
+    '''
+    This validator ensures that the metadata is a list of dicts like this:
+    
+        [ {"label": "foo", "value": "bar"}, ... ]
+    
+    Otherwise it will raise a ValidationError().
+    '''
+    
+    metadata = value
+    if not isinstance(metadata, list):
+        raise serializers.ValidationError("Metadata must be a *list* of pairs: [{'label': '', 'value': ''}, ...]. Given: %s" % type(metadata))
+
+    required_fields = ('label', 'value')
+    for pair in metadata:
+        if not isinstance(pair, dict):
+            raise serializers.ValidationError("Metadata pair '%s' invalid. Must be a *dict*: {'label': '', 'value': ''}" % pair)
+        if set(pair.keys()) != set(required_fields):
+            raise serializers.ValidationError("Metadata pair '%s' invalid. Must contain keys: label, value" % pair)
+        if not isinstance(pair['label'], basestring) or not isinstance(pair['value'], basestring):
+            raise serializers.ValidationError("Metadata pair '%s' invalid. Label and value must be strings, not composite types." % pair)
+
 class ResourceSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
-    description = serializers.CharField(max_length=None, required=False)
+    description = serializers.CharField(max_length=None, required=False, allow_blank=True)
+    metadata = serializers.JSONField(binary=False, required=False, validators=[metadata_validator])
 
     class Meta:
         model = Resource
-        fields = ('url', 'id', 'course_id', 'title', 'description', 'sort_order', 'upload_file_name', 'created', 'updated')
+        fields = ('url', 'id', 'course_id', 'title', 'description', 'metadata', 'sort_order', 'upload_file_name', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
         self.file_upload = kwargs.pop('file_upload', None)
@@ -130,12 +154,14 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         course_id = validated_data['course_id']
         title = validated_data['title']
         description = validated_data.get('description', '')
+        metadata = validated_data.get('metadata', None)
 
         upload_result = self.handle_file_upload()
         resource_attrs = {
             "course": course_id,
             "title": title,
             "description": description,
+            "metadata": json.dumps(metadata),
             "media_store": upload_result['media_store'],
             "upload_file_name": upload_result['upload_file_name'],
             "is_upload": upload_result['is_upload'],
@@ -148,6 +174,8 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
         instance.sort_order = validated_data.get('sort_order', instance.sort_order)
+        if 'metadata' in validated_data:
+            instance.metadata = json.dumps(validated_data['metadata'])
         instance.save()
         return instance
 
@@ -172,6 +200,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         data.update({
             "type": "images",
             "is_upload": instance.is_upload,
+            "metadata": instance.load_metadata(),
         })
         data.update(resource_to_representation(instance))
         return data
