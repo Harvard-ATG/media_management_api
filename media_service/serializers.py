@@ -17,7 +17,7 @@ class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
     collection_id = serializers.PrimaryKeyRelatedField(queryset=Collection.objects.all())
     collection_url = serializers.HyperlinkedIdentityField(view_name="collection-detail", lookup_field="pk")
     course_image_id = serializers.PrimaryKeyRelatedField(queryset=Resource.objects.all(), source='resource_id')
-    
+
     class Meta:
         model = CollectionResource
         fields = ('id', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
@@ -92,7 +92,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             for course_image_id in course_image_ids:
                 CollectionResource.objects.create(collection_id=collection.pk, resource_id=course_image_id)
         return collection
-    
+
     def update(self, instance, validated_data):
         request = self.context['request']
         if not validated_data:
@@ -117,12 +117,12 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
 def metadata_validator(value):
     '''
     This validator ensures that the metadata is a list of dicts like this:
-    
+
         [ {"label": "foo", "value": "bar"}, ... ]
-    
+
     Otherwise it will raise a ValidationError().
     '''
-    
+
     metadata = value
     if not isinstance(metadata, list):
         raise serializers.ValidationError("Metadata must be a *list* of pairs: [{'label': '', 'value': ''}, ...]. Given: %s" % type(metadata))
@@ -157,6 +157,8 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         metadata = validated_data.get('metadata', None)
 
         upload_result = self.handle_file_upload()
+        if 'upload_file_name' in upload_result:
+            title = upload_result['upload_file_name']
         resource_attrs = {
             "course": course_id,
             "title": title,
@@ -208,7 +210,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
     collections_url = serializers.HyperlinkedIdentityField(view_name="course-collections", lookup_field="pk")
     images_url = serializers.HyperlinkedIdentityField(view_name="course-images", lookup_field="pk")
-    
+
     class Meta:
         model = Course
         fields = ('url', 'id', 'title', 'collections_url', 'images_url', 'lti_context_id', 'lti_tool_consumer_instance_guid', 'created', 'updated')
@@ -221,7 +223,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
             self.fields['images'] = ResourceSerializer(source="resources", many=True, read_only=True)
         if 'collections' in include:
             self.fields['collections'] = CollectionSerializer(many=True, read_only=True)
-            
+
     def to_representation(self, instance):
         data = super(CourseSerializer, self).to_representation(instance)
         data['type'] = 'courses'
