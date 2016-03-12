@@ -101,6 +101,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             instance.title = validated_data['title']
         if 'description' in validated_data:
             instance.description = validated_data['description']
+        if 'sort_order' in validated_data:
+            instance.sort_order = validated_data['sort_order']
         if 'course_image_ids' in validated_data:
             course_image_ids = validated_data['course_image_ids']
             CollectionResource.objects.filter(collection__pk=instance.pk).delete()
