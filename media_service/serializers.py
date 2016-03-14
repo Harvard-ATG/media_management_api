@@ -66,7 +66,7 @@ class CollectionResourceIdsField(serializers.Field):
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     images_url = serializers.HyperlinkedIdentityField(view_name="collectionimages-list", lookup_field="pk")
-    description = serializers.CharField(max_length=None, required=False)
+    description = serializers.CharField(max_length=None, required=False, allow_blank=True)
     course_image_ids = CollectionResourceIdsField(read_only=False, required=False)
 
     class Meta:
