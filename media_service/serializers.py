@@ -153,6 +153,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         super(ResourceSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
+        request = self.context['request']
         course_id = validated_data['course_id']
         title = validated_data['title']
         description = validated_data.get('description', '')
@@ -165,6 +166,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
             "course": course_id,
             "title": title,
             "description": description,
+            "owner": request.user.profile,
             "metadata": json.dumps(metadata),
             "media_store": upload_result['media_store'],
             "upload_file_name": upload_result['upload_file_name'],
