@@ -9,7 +9,15 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, File
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import PermissionDenied
 
+import zipfile
+from django.core.files.base import File
+from django.core.files.uploadedfile import UploadedFile
+
+import io
+import os
+
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
+from media_service.mediastore import MediaStoreUpload
 from media_service.iiif import CollectionManifestController
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
@@ -65,7 +73,7 @@ be an empty list or a list with one object.
         queryset = super(CourseViewSet, self).get_queryset()
         queryset = CourseEndpointFilter(self).filter_queryset(queryset)
         return queryset
-    
+
     def list(self, request, format=None):
         queryset = self.get_queryset()
 
@@ -74,7 +82,7 @@ be an empty list or a list with one object.
         lti_filters = dict([(k, self.request.GET[k]) for k in lti_params if k in self.request.GET])
         if len(lti_filters.keys()) > 0:
             queryset = queryset.filter(**lti_filters)
-    
+
         serializer = CourseSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -95,7 +103,7 @@ be an empty list or a list with one object.
                 "url": request.build_absolute_uri(url),
             })
         return Response(manifests)
-    
+
 
 class CollectionViewSet(viewsets.ModelViewSet):
     '''
@@ -116,7 +124,7 @@ Collection Endpoints
         queryset = super(CollectionViewSet, self).get_queryset()
         queryset = CollectionEndpointFilter(self).filter_queryset(queryset)
         return queryset
-    
+
     def list(self, request, format=None):
         collections = self.get_queryset()
         serializer = CollectionSerializer(collections, many=True, context={'request': request})
@@ -181,7 +189,25 @@ class CourseImagesListView(GenericAPIView):
 
         response_data = []
         logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
-        for file_upload in request.FILES.getlist(file_param):
+
+        files = []
+        for file in request.FILES.getlist(file_param):
+            if "zip" in file.content_type:
+                # unzip and append to the list
+                zip = zipfile.ZipFile(file, "r")
+                for f in zip.namelist():
+                    logger.debug("ZipFile content: %s" % f)
+                    zf = zip.open(f).read()
+                    newfile = File(io.BytesIO(zf))
+                    newfile.name = f
+
+                    # avoiding temp files added to archive
+                    if "__MACOSX" not in newfile.name:
+                        files.append(newfile)
+            else:
+                files.append(file)
+
+        for file_upload in files:
             logger.debug("Processing file upload: %s" % file_upload.name)
             data = request.data.copy()
             data['course_id'] = course.pk
@@ -193,7 +219,7 @@ class CourseImagesListView(GenericAPIView):
                 logger.error(serializer.errors)
                 return Response(response_data + [serializer.errors], status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
-    
+
 class CollectionImagesListView(GenericAPIView):
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
@@ -226,7 +252,7 @@ class CollectionImagesDetailView(GenericAPIView):
          collection_resource = self.get_object()
          serializer = CollectionResourceSerializer(collection_resource, context={'request': request})
          return Response(serializer.data)
-    
+
     def delete(self, request, pk=None, format=None):
         collection_resource = self.get_object()
         collection_resource.delete()
