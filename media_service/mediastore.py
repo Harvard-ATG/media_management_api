@@ -3,6 +3,7 @@ import hashlib
 import tempfile
 import magic
 import logging
+import zipfile
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
@@ -41,7 +42,7 @@ class MediaStoreUpload:
     Public methods:
         - save()
         - is_valid()
-    
+
     Exceptions:
         - MediaStoreUploadException
 
@@ -51,12 +52,13 @@ class MediaStoreUpload:
             media_store_instance = media_store_upload.save()
     '''
     VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png')
+    VALID_ZIP_EXTENSIONS = ('zip',)
 
     def __init__(self, uploaded_file):
         if not isinstance(uploaded_file, UploadedFile):
             raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile")
 
-        self.file = uploaded_file 
+        self.file = uploaded_file
         self.instance = None # Holds MediaStore instance
         self._file_md5hash = None # holds cached MD5 hash of the file
         self._is_valid = True
@@ -72,7 +74,7 @@ class MediaStoreUpload:
         if self.instanceExists():
             logger.debug("instance exists")
             self.instance = self.getInstance()
-            
+
         else:
             logger.debug("creating new instance")
             self.instance = self.createInstance()
@@ -88,28 +90,28 @@ class MediaStoreUpload:
         self.validateImageOpens()
         logger.debug("isValid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
-    
+
     def error(self, name, error):
         '''
         Saves a validation error.
         '''
         self._is_valid = False
         self._error[name] = error
-    
+
     def getErrors(self):
         return "".join([self._error[k] for k in sorted(self._error)])
-    
+
     def validateImageExtension(self):
         '''
         Validates that the image extension is valid.
         '''
         ext = self.getFileExtension()
-        valid_exts = self.VALID_IMAGE_EXTENSIONS
+        valid_exts = self.VALID_IMAGE_EXTENSIONS + self.VALID_ZIP_EXTENSIONS
         if ext not in valid_exts:
             self.error('extension', "Image extension '%s' is invalid [must be one of %s]. " % (ext, valid_exts))
             return False
         return True
-    
+
     def validateImageOpens(self):
         '''
         Validates that the given image can be opened and identified by the Pillow image library.
@@ -120,6 +122,14 @@ class MediaStoreUpload:
             self.error('open', "Image cannot be opened or identified [%s]. " % str(e))
             return False
         return True
+
+    def validateZipOpens(self):
+        '''
+        Validates that a given zip can be opened using zipfile
+        '''
+        if zipfile.is_zipfile(self.file):
+            return True
+        return False
 
     def getS3connection(self):
         '''
@@ -143,7 +153,7 @@ class MediaStoreUpload:
         k = Key(bucket)
         k.key = self.getS3FileKey()
         self.file.seek(0)
-        
+
         logger.debug("Saving file to S3 bucket with key=%s" % k.key)
         k.set_contents_from_file(self.file, replace=True)
 
@@ -205,7 +215,7 @@ class MediaStoreUpload:
     def getFileType(self):
         '''
         Returns the MIME type of the uploaded file via python-magic (libmagic).
-        
+
         NOTE: there are *two* python libraries named "magic" so if this method is generating
         errors, it's possible that the other "magic" is installed on the system.
         '''
@@ -231,11 +241,11 @@ class MediaStoreUpload:
             file_extension = canonical_map[file_extension]
 
         return file_extension
-    
+
     def getImageDimensions(self):
         '''
         Returns the dimensions of the uploaded image file.
-        
+
         Borrows Django's django.core.files.images.get_image_dimensions
         method to get the dimensions via Pillow (python imaging module).
         '''
@@ -292,4 +302,3 @@ class MediaStoreUpload:
                     dest.write(c)
             else:
                 dest.write(file.read())
-
