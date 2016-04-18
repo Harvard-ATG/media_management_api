@@ -1,5 +1,6 @@
 import unittest
 import base64
+import re
 from mock import MagicMock
 from django.core.files.uploadedfile import SimpleUploadedFile
 from media_service.mediastore import MediaStoreUpload, MediaStoreUploadException
@@ -7,12 +8,6 @@ from media_service.models import MediaStore
 
 class TestMediaStoreUpload(unittest.TestCase):
     test_files = {
-        'test.zip': {
-            'filename': 'test.zip',
-            'extension': 'zip',
-            'content-type': 'application/zip',
-            'content':
-        },
         'test.png': {
             'filename': 'test.png',
             'extension': 'png',
