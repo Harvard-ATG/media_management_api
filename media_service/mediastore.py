@@ -7,6 +7,7 @@ import zipfile
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
+from django.core.files.base import File
 from django.db import transaction
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -55,8 +56,9 @@ class MediaStoreUpload:
     VALID_ZIP_EXTENSIONS = ('zip',)
 
     def __init__(self, uploaded_file):
-        if not isinstance(uploaded_file, UploadedFile):
-            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile")
+
+        if not isinstance(uploaded_file, UploadedFile) and not isinstance(uploaded_file, File):
+            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile or django.core.files.base.File")
 
         self.file = uploaded_file
         self.instance = None # Holds MediaStore instance
@@ -88,6 +90,7 @@ class MediaStoreUpload:
         '''
         self.validateImageExtension()
         self.validateImageOpens()
+
         logger.debug("isValid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
 
@@ -106,7 +109,7 @@ class MediaStoreUpload:
         Validates that the image extension is valid.
         '''
         ext = self.getFileExtension()
-        valid_exts = self.VALID_IMAGE_EXTENSIONS + self.VALID_ZIP_EXTENSIONS
+        valid_exts = self.VALID_IMAGE_EXTENSIONS
         if ext not in valid_exts:
             self.error('extension', "Image extension '%s' is invalid [must be one of %s]. " % (ext, valid_exts))
             return False
@@ -122,14 +125,6 @@ class MediaStoreUpload:
             self.error('open', "Image cannot be opened or identified [%s]. " % str(e))
             return False
         return True
-
-    def validateZipOpens(self):
-        '''
-        Validates that a given zip can be opened using zipfile
-        '''
-        if zipfile.is_zipfile(self.file):
-            return True
-        return False
 
     def getS3connection(self):
         '''
