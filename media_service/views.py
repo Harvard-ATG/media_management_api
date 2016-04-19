@@ -9,15 +9,8 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, File
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import PermissionDenied
 
-import zipfile
-from django.core.files.base import File
-from django.core.files.uploadedfile import UploadedFile
-
-import io
-import os
-
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
-from media_service.mediastore import MediaStoreUpload
+from media_service.mediastore import MediaStoreUpload, process_zip
 from media_service.iiif import CollectionManifestController
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
@@ -190,22 +183,7 @@ class CourseImagesListView(GenericAPIView):
         response_data = []
         logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
 
-        files = []
-        for file in request.FILES.getlist(file_param):
-            if "zip" in file.content_type:
-                # unzip and append to the list
-                zip = zipfile.ZipFile(file, "r")
-                for f in zip.namelist():
-                    logger.debug("ZipFile content: %s" % f)
-                    zf = zip.open(f).read()
-                    newfile = File(io.BytesIO(zf))
-                    newfile.name = f
-
-                    # avoiding temp files added to archive
-                    if "__MACOSX" not in newfile.name:
-                        files.append(newfile)
-            else:
-                files.append(file)
+        files = process_zip(request.FILES.getlist(file_param))
 
         for file_upload in files:
             logger.debug("Processing file upload: %s" % file_upload.name)

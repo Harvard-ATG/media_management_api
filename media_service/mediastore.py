@@ -1,3 +1,4 @@
+import io
 import os
 import hashlib
 import tempfile
@@ -25,6 +26,30 @@ logger = logging.getLogger(__name__)
 
 class MediaStoreUploadException(Exception):
     pass
+
+def process_zip(filelist):
+    '''
+    processes a file upload list, unzipping all zips
+    returns a new list with unzipped files
+    '''
+    newlist = []
+    for file in filelist:
+        if "zip" in file.content_type:
+            # unzip and append to the list
+            zip = zipfile.ZipFile(file, "r")
+            for f in zip.namelist():
+                logger.debug("ZipFile content: %s" % f)
+                zf = zip.open(f).read()
+                newfile = File(io.BytesIO(zf))
+                newfile.name = f
+
+                # avoiding temp files added to archive
+                if "__MACOSX" not in newfile.name:
+                    newlist.append(newfile)
+        else:
+            newlist.append(file)
+
+    return newlist
 
 class MediaStoreUpload:
     '''
