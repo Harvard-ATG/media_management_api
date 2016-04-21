@@ -34,7 +34,7 @@ def processFileUploads(filelist):
     '''
     newlist = []
     for file in filelist:
-        if "zip" in file.content_type:
+        if zipfile.is_zipfile(file):
             # unzip and append to the list
             zip = zipfile.ZipFile(file, "r")
             for f in zip.namelist():
@@ -78,7 +78,6 @@ class MediaStoreUpload:
             media_store_instance = media_store_upload.save()
     '''
     VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png')
-    VALID_ZIP_EXTENSIONS = ('zip',)
 
     def __init__(self, uploaded_file):
 

@@ -202,13 +202,15 @@ class TestZipUpload(unittest.TestCase):
     test_files = TEST_FILES
 
     @patch('zipfile.ZipFile')
-    def testProcessFileUploads(self, mock_zip):
+    @patch('zipfile.is_zipfile')
+    def testProcessFileUploads(self, mock_is_zipfile, mock_zip):
         testZip = MockZipFile()
         testZip.write(self.test_files['test.png'])
         testZip.write(self.test_files['empty.jpg'])
 
         files = [testZip]
         mock_zip.return_value = testZip
+        mock_is_zipfile.return_value = True
         files = processFileUploads(files)
 
         self.assertEqual(len(files), 2)
