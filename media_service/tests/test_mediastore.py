@@ -228,7 +228,6 @@ class MockZipFile:
     def write(self, fname):
         self.files.append(fname)
     def namelist(self):
-        print("namelist!!")
         names = []
         for name in self.files:
             names.append(name)
