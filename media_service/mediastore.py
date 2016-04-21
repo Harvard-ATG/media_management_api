@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class MediaStoreUploadException(Exception):
     pass
 
-def process_zip(filelist):
+def processFileUploads(filelist):
     '''
     processes a file upload list, unzipping all zips
     returns a new list with unzipped files

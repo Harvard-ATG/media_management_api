@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.exceptions import PermissionDenied
 
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
-from media_service.mediastore import MediaStoreUpload, process_zip
+from media_service.mediastore import MediaStoreUpload, processFileUploads
 from media_service.iiif import CollectionManifestController
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
@@ -183,7 +183,7 @@ class CourseImagesListView(GenericAPIView):
         response_data = []
         logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
 
-        files = process_zip(request.FILES.getlist(file_param))
+        files = processFileUploads(request.FILES.getlist(file_param))
 
         for file_upload in files:
             logger.debug("Processing file upload: %s" % file_upload.name)
