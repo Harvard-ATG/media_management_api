@@ -1,40 +1,44 @@
 import unittest
 import base64
 import re
-from mock import MagicMock
+import zipfile
+from mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
-from media_service.mediastore import MediaStoreUpload, MediaStoreUploadException
+from media_service.mediastore import MediaStoreUpload, MediaStoreUploadException, processFileUploads
 from media_service.models import MediaStore
 
+TEST_FILES = {
+    'test.png': {
+        'filename': 'test.png',
+        'extension': 'png',
+        'content-type': 'image/png',
+        # image content from: http://dummyimage.com/24x24/000/fff&text=Test
+        'content': base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABgAAAAYBAMAAAASWSDLAAAAFVBMVEUAAAD///8fHx9fX19/f38/Pz+fn5+WwvWOAAAAPElEQVQYlWNgGHjAZGIMocEkswKYYoFxjA2UTdVMIRxmBSMjuAyLsRGzEZwD0gLjMLkaKBuzmsKMp4WbAVr9BJo70GnDAAAAAElFTkSuQmCC'),
+        'dimensions': {'w': 24,'h': 24},
+    },
+    'test.badextension': {
+        'filename': 'test.badextension',
+        'extension': 'badextension',
+        'content-type': None,
+        'content': None
+    },
+    'empty.jpg': {
+        'filename': 'test.jpg',
+        'extension': 'jpg',
+        'content-type': 'image/jpeg',
+        'content': None
+    },
+    'empty.jpeg': {
+        'filename': 'test.jpeg',
+        'extension': 'jpg',
+        'content-type': 'image/jpeg',
+        'content': None
+    },
+}
+
 class TestMediaStoreUpload(unittest.TestCase):
-    test_files = {
-        'test.png': {
-            'filename': 'test.png',
-            'extension': 'png',
-            'content-type': 'image/png',
-            # image content from: http://dummyimage.com/24x24/000/fff&text=Test
-            'content': base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAABgAAAAYBAMAAAASWSDLAAAAFVBMVEUAAAD///8fHx9fX19/f38/Pz+fn5+WwvWOAAAAPElEQVQYlWNgGHjAZGIMocEkswKYYoFxjA2UTdVMIRxmBSMjuAyLsRGzEZwD0gLjMLkaKBuzmsKMp4WbAVr9BJo70GnDAAAAAElFTkSuQmCC'),
-            'dimensions': {'w': 24,'h': 24},
-        },
-        'test.badextension': {
-            'filename': 'test.badextension',
-            'extension': 'badextension',
-            'content-type': None,
-            'content': None
-        },
-        'empty.jpg': {
-            'filename': 'test.jpg',
-            'extension': 'jpg',
-            'content-type': 'image/jpeg',
-            'content': None
-        },
-        'empty.jpeg': {
-            'filename': 'test.jpeg',
-            'extension': 'jpg',
-            'content-type': 'image/jpeg',
-            'content': None
-        },
-    }
+
+    test_files = TEST_FILES
 
     def setUp(self):
         pass
@@ -191,3 +195,43 @@ class TestMediaStoreUpload(unittest.TestCase):
         normalized_jpeg_extension = "jpg"
         self.assertEqual(media_store_upload.getFileExtension(), normalized_jpeg_extension)
         self.assertTrue(media_store_upload.validateImageExtension())
+
+
+class TestZipUpload(unittest.TestCase):
+
+    test_files = TEST_FILES
+
+    @patch('zipfile.ZipFile')
+    def testProcessFileUploads(self, mock_zip):
+        testZip = MockZipFile()
+        testZip.write(self.test_files['test.png'])
+        testZip.write(self.test_files['empty.jpg'])
+
+        files = [testZip]
+        mock_zip.return_value = testZip
+        files = processFileUploads(files)
+
+        self.assertEqual(len(files), 2)
+        self.assertNotIn(testZip, files)
+
+
+class MockZipFile:
+    test_files = TEST_FILES
+
+    def __init__(self):
+        self.files = []
+        self.content_type = "application/zip"
+    def __iter__(self):
+        return iter(self.files)
+    def write(self, fname):
+        self.files.append(fname)
+    def namelist(self):
+        print("namelist!!")
+        names = []
+        for name in self.files:
+            names.append(name)
+        return names
+    def open(self, file):
+        return self
+    def read(self):
+        return self.test_files['test.png']['content']
