@@ -1,11 +1,14 @@
+import io
 import os
 import hashlib
 import tempfile
 import magic
 import logging
+import zipfile
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
+from django.core.files.base import File
 from django.db import transaction
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -24,6 +27,30 @@ logger = logging.getLogger(__name__)
 class MediaStoreUploadException(Exception):
     pass
 
+def processFileUploads(filelist):
+    '''
+    processes a file upload list, unzipping all zips
+    returns a new list with unzipped files
+    '''
+    newlist = []
+    for file in filelist:
+        if zipfile.is_zipfile(file):
+            # unzip and append to the list
+            zip = zipfile.ZipFile(file, "r")
+            for f in zip.namelist():
+                logger.debug("ZipFile content: %s" % f)
+                zf = zip.open(f).read()
+                newfile = File(io.BytesIO(zf))
+                newfile.name = f
+
+                # avoiding temp files added to archive
+                if "__MACOSX" not in newfile.name:
+                    newlist.append(newfile)
+        else:
+            newlist.append(file)
+
+    return newlist
+
 class MediaStoreUpload:
     '''
     The MediaStoreUpload class is responsible for storing a django UploadedFile.
@@ -41,7 +68,7 @@ class MediaStoreUpload:
     Public methods:
         - save()
         - is_valid()
-    
+
     Exceptions:
         - MediaStoreUploadException
 
@@ -53,10 +80,11 @@ class MediaStoreUpload:
     VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png')
 
     def __init__(self, uploaded_file):
-        if not isinstance(uploaded_file, UploadedFile):
-            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile")
 
-        self.file = uploaded_file 
+        if not isinstance(uploaded_file, UploadedFile) and not isinstance(uploaded_file, File):
+            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile or django.core.files.base.File")
+
+        self.file = uploaded_file
         self.instance = None # Holds MediaStore instance
         self._file_md5hash = None # holds cached MD5 hash of the file
         self._is_valid = True
@@ -72,7 +100,7 @@ class MediaStoreUpload:
         if self.instanceExists():
             logger.debug("instance exists")
             self.instance = self.getInstance()
-            
+
         else:
             logger.debug("creating new instance")
             self.instance = self.createInstance()
@@ -86,19 +114,20 @@ class MediaStoreUpload:
         '''
         self.validateImageExtension()
         self.validateImageOpens()
+
         logger.debug("isValid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
-    
+
     def error(self, name, error):
         '''
         Saves a validation error.
         '''
         self._is_valid = False
         self._error[name] = error
-    
+
     def getErrors(self):
         return "".join([self._error[k] for k in sorted(self._error)])
-    
+
     def validateImageExtension(self):
         '''
         Validates that the image extension is valid.
@@ -109,7 +138,7 @@ class MediaStoreUpload:
             self.error('extension', "Image extension '%s' is invalid [must be one of %s]. " % (ext, valid_exts))
             return False
         return True
-    
+
     def validateImageOpens(self):
         '''
         Validates that the given image can be opened and identified by the Pillow image library.
@@ -143,7 +172,7 @@ class MediaStoreUpload:
         k = Key(bucket)
         k.key = self.getS3FileKey()
         self.file.seek(0)
-        
+
         logger.debug("Saving file to S3 bucket with key=%s" % k.key)
         k.set_contents_from_file(self.file, replace=True)
 
@@ -205,7 +234,7 @@ class MediaStoreUpload:
     def getFileType(self):
         '''
         Returns the MIME type of the uploaded file via python-magic (libmagic).
-        
+
         NOTE: there are *two* python libraries named "magic" so if this method is generating
         errors, it's possible that the other "magic" is installed on the system.
         '''
@@ -231,11 +260,11 @@ class MediaStoreUpload:
             file_extension = canonical_map[file_extension]
 
         return file_extension
-    
+
     def getImageDimensions(self):
         '''
         Returns the dimensions of the uploaded image file.
-        
+
         Borrows Django's django.core.files.images.get_image_dimensions
         method to get the dimensions via Pillow (python imaging module).
         '''
@@ -292,4 +321,3 @@ class MediaStoreUpload:
                     dest.write(c)
             else:
                 dest.write(file.read())
-
