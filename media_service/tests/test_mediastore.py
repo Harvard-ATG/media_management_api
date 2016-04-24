@@ -205,7 +205,6 @@ class TestZipUpload(unittest.TestCase):
     @patch('zipfile.is_zipfile')
     def testProcessFileUploads(self, mock_is_zipfile, mock_zip):
         testZip = MockZipFile()
-        print("this thing: %s" % self.test_files['test.png'])
         testZip.write(self.test_files['test.png']['filename'])
         testZip.write(self.test_files['empty.jpg']['filename'])
 
@@ -213,10 +212,14 @@ class TestZipUpload(unittest.TestCase):
         mock_zip.return_value = testZip
         mock_is_zipfile.return_value = True
         files = processFileUploads(files)
-
         self.assertEqual(len(files), 2)
         self.assertNotIn(testZip, files)
 
+        testZip.write('some_directory/')
+        files = [testZip]
+        files = processFileUploads(files)
+        self.assertEqual(len(files), 2)
+        self.assertNotIn('some_directory/', files)
 
 class MockZipFile:
     test_files = TEST_FILES
