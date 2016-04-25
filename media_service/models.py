@@ -239,7 +239,7 @@ class Collection(BaseModel, SortOrderModelMixin):
         super(Collection, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return "{0}:{1}".format(self.id, self.title)
+        return u'%s:%s' % (self.id, self.title)
 
     @classmethod
     def get_course_collections(cls, course_pk):

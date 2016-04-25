@@ -21,15 +21,6 @@ class TestMediaStore(unittest.TestCase):
             "file_type": "image/gif",
             "img_width": 24,
             "img_height": 24,            
-        },
-        {
-            "file_name": u'январь.jpg',
-            "file_size": 1024,
-            "file_md5hash": '4213090cae0c1ad78285207ffe9fb456',
-            "file_extension": "jpg",
-            "file_type": "image/jpg",
-            "img_width": 800,
-            "img_height": 600,            
         }
     ]
     
@@ -69,7 +60,8 @@ class TestUnicodeInput(unittest.TestCase):
         titles = [
             'My Awesome Collection',
              u'January is "январь" in Russian',
-             u'New Year in Japanese: 新年'
+             u'New Year in Japanese: 新年',
+             'Yet another awesome collection'
         ]
         course = self._createCourse(lti_context_id=1)
         
