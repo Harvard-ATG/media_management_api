@@ -5,6 +5,7 @@ import tempfile
 import magic
 import logging
 import zipfile
+import re
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
@@ -38,14 +39,19 @@ def processFileUploads(filelist):
             # unzip and append to the list
             zip = zipfile.ZipFile(file, "r")
             for f in zip.namelist():
-                logger.debug("ZipFile content: %s" % f)
+                logger.debug("Extracting ZipFile: %s" % f)
+
+                if f.endswith('/'):
+                    logger.debug("Skipping directory entry: %s" % f)
+                    continue
+                if "__MACOSX" in f or ".DS_Store" in f:
+                    logger.debug("Skipping MAC OS X resource file artifact: %s" % f)
+                    continue
+                    
                 zf = zip.open(f).read()
                 newfile = File(io.BytesIO(zf))
                 newfile.name = f
-
-                # avoiding temp files added to archive
-                if "__MACOSX" not in newfile.name:
-                    newlist.append(newfile)
+                newlist.append(newfile)
         else:
             newlist.append(file)
 
@@ -247,6 +253,7 @@ class MediaStoreUpload:
         Returns the lowercase file extension (no dot). Example: "jpg" or "gif"
         '''
         name_parts = os.path.splitext(self.file.name)
+        logger.debug("getFileExtension: %s" % self.file.name)
         file_extension = ''
         if len(name_parts) > 1:
             file_extension = name_parts[1]
