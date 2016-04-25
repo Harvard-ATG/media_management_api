@@ -39,14 +39,19 @@ def processFileUploads(filelist):
             # unzip and append to the list
             zip = zipfile.ZipFile(file, "r")
             for f in zip.namelist():
-                logger.debug("ZipFile content: %s" % f)
+                logger.debug("Extracting ZipFile: %s" % f)
+
+                if f.endswith('/'):
+                    logger.debug("Skipping directory entry: %s" % f)
+                    continue
+                if "__MACOSX" in f or ".DS_Store" in f:
+                    logger.debug("Skipping MAC OS X resource file artifact: %s" % f)
+                    continue
+                    
                 zf = zip.open(f).read()
                 newfile = File(io.BytesIO(zf))
                 newfile.name = f
-
-                # avoiding temp files added to archive
-                if "__MACOSX" not in newfile.name and not re.match(r".*\/$", newfile.name):
-                    newlist.append(newfile)
+                newlist.append(newfile)
         else:
             newlist.append(file)
 
