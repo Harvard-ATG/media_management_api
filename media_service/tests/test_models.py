@@ -1,5 +1,6 @@
+# -*- coding: UTF-8 -*-
 import unittest
-from media_service.models import MediaStore
+from media_service.models import MediaStore, Collection, Course
 
 class TestMediaStore(unittest.TestCase):
     test_items = [
@@ -47,3 +48,29 @@ class TestMediaStore(unittest.TestCase):
             self.assertEqual(thumb_actual['width'], thumb_w)
             self.assertEqual(thumb_actual['height'], thumb_h)
             self.assertTrue(thumb_actual['url'])
+
+class TestUnicodeInput(unittest.TestCase):
+    
+    def _createCourse(self, lti_context_id=None):
+        course = Course(title="Test Course: %s" % lti_context_id, lti_context_id=lti_context_id, lti_tool_consumer_instance_guid="canavs")
+        course.save()
+        return course
+    
+    def test_collection_title(self):
+        titles = [
+            'My Awesome Collection',
+             u'January is "январь" in Russian',
+             u'New Year in Japanese: 新年',
+             'Yet another awesome collection'
+        ]
+        course = self._createCourse(lti_context_id=1)
+        
+        for title in titles:
+            collection = Collection(title=title, course=course)
+            collection.save()
+            self.assertEqual(collection.title, title)
+            try:
+                stringified_collection = str(collection)
+            except UnicodeEncodeError as e:
+                self.fail('Converting the collection object to a string raised UnicodeEncodeError: %s' % e)
+
