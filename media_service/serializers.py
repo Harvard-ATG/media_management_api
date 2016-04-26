@@ -162,6 +162,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         upload_result = self.handle_file_upload()
         if 'upload_file_name' in upload_result:
             title = upload_result['upload_file_name']
+
         resource_attrs = {
             "course": course_id,
             "title": title,
@@ -172,6 +173,11 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
             "upload_file_name": upload_result['upload_file_name'],
             "is_upload": upload_result['is_upload'],
         }
+        
+        # Metadata cannot be null, so only include if it's non-null
+        if metadata is not None:
+            resource_attrs['metadata'] = metadata
+
         resource = Resource(**resource_attrs)
         resource.save()
         return resource
