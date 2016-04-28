@@ -118,7 +118,7 @@ class UserProfile(BaseModel):
         verbose_name_plural = 'user_profiles'
 
     def __unicode__(self):
-        return "UserProfile:%s" % self.id
+        return u'UserProfile:%s' % self.id
 
 class Course(BaseModel):
     title = models.CharField(max_length=255)
@@ -136,7 +136,7 @@ class Course(BaseModel):
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
     def __unicode__(self):
-        return "{0}:{1}:{2}".format(self.id, self.lti_context_id, self.title)
+        return u'{0}:{1}:{2}'.format(self.id, self.lti_context_id, self.title)
 
 class Resource(BaseModel, SortOrderModelMixin):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
@@ -215,7 +215,7 @@ class Resource(BaseModel, SortOrderModelMixin):
             return []
 
     def __unicode__(self):
-        return "{0}:{1}".format(self.id, self.title)
+        return u'{0}:{1}'.format(self.id, self.title)
 
     @classmethod
     def get_course_images(cls, course_pk):
@@ -239,7 +239,7 @@ class Collection(BaseModel, SortOrderModelMixin):
         super(Collection, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return "{0}:{1}".format(self.id, self.title)
+        return u'%s:%s' % (self.id, self.title)
 
     @classmethod
     def get_course_collections(cls, course_pk):
@@ -262,7 +262,7 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
         super(CollectionResource, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return "{0}".format(self.id)
+        return u'{0}'.format(self.id)
 
     @classmethod
     def get_collection_images(cls, collection_pk):
