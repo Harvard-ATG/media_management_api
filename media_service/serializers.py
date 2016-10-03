@@ -168,7 +168,6 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
             "title": title,
             "description": description,
             "owner": request.user.profile,
-            "metadata": json.dumps(metadata),
             "media_store": upload_result['media_store'],
             "upload_file_name": upload_result['upload_file_name'],
             "is_upload": upload_result['is_upload'],
@@ -176,7 +175,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         
         # Metadata cannot be null, so only include if it's non-null
         if metadata is not None:
-            resource_attrs['metadata'] = metadata
+            resource_attrs['metadata'] = json.dumps(metadata)
 
         resource = Resource(**resource_attrs)
         resource.save()
