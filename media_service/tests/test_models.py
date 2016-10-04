@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 import unittest
-from media_service.models import MediaStore, Collection, Course
+import json
+from media_service.models import MediaStore, Collection, Course, Resource, metadata_default
 
 class TestMediaStore(unittest.TestCase):
     test_items = [
@@ -48,6 +49,36 @@ class TestMediaStore(unittest.TestCase):
             self.assertEqual(thumb_actual['width'], thumb_w)
             self.assertEqual(thumb_actual['height'], thumb_h)
             self.assertTrue(thumb_actual['url'])
+
+class TestResource(unittest.TestCase):
+    test_course = None
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.test_course = Course(title="Test Course" , lti_context_id="ABC123", lti_tool_consumer_instance_guid="canvas")
+        cls.test_course.save()
+
+    def test_save_with_metadata(self):
+        title = "Test Resource"
+        course = TestResource.test_course
+        default_metadata = metadata_default()
+        missing_metadata = ["", None]
+        invalid_metadata = [json.dumps(v) for v in None, True, False, 123, {}]
+        valid_metadata = [json.dumps(v) for v in [], [{"label":"X", "value": "Y"}]]
+        
+        # check that missing or invalid metadata values are saved using the default value
+        # for example the string "null" is not a valid value, so it should be overwritten with "[]"
+        for metadata in missing_metadata + invalid_metadata:
+            instance = Resource(course=course, title=title, metadata=metadata)
+            instance.save()
+            self.assertNotEqual(metadata, instance.metadata)
+            self.assertEqual(default_metadata, instance.metadata)
+        
+        # check that valid metadata is saved unchanged
+        for metadata in valid_metadata:
+            instance = Resource(course=course, title=title, metadata=metadata)
+            instance.save()
+            self.assertEqual(metadata, instance.metadata)
 
 class TestUnicodeInput(unittest.TestCase):
     

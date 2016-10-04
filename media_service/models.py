@@ -168,11 +168,11 @@ class Resource(BaseModel, SortOrderModelMixin):
     def save(self, *args, **kwargs):
         if not self.sort_order:
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
-        if self.metadata == "null" or not self.metadata:
+        if not (isinstance(self.metadata, basestring) and len(self.metadata) > 0 and '[]' == self.metadata[0] + self.metadata[-1]):
             self.metadata = metadata_default()
         if self.media_store:
             self.media_store.reference_count += 1
-            self.media_store.save() 
+            self.media_store.save()
         super(Resource, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
