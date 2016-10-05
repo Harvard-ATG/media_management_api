@@ -94,8 +94,14 @@ class IIIFManifestTest(unittest.TestCase):
     def test_manifest_has_unique_canvas_ids(self):
         # create a new list of images with duplicates of first and last image
         images = self.get_images_list()
+        total_duplicates = 0
         for image_id in (images[0]['id'], images[-1]['id']):
-            self.duplicate_image(images, image_id, num_duplicates=3)
+            num_duplicates = 3
+            self.duplicate_image(images, image_id, num_duplicates)
+            total_duplicates += num_duplicates
+
+        # expect there to be duplicates added to the list
+        self.assertEqual(total_duplicates + len(self.get_images_list()), len(images))
         
         # generate manifest from the images
         manifest_id = 1
@@ -111,7 +117,5 @@ class IIIFManifestTest(unittest.TestCase):
             else:
                 dups.append(canvas_id)
         
-        # expect there to be no duplicate canvas IDs
+        # expect there to be no duplicate canvas IDs in the manifest
         self.assertEqual(0, len(dups))
-        
-    
