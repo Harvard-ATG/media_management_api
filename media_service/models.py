@@ -118,7 +118,7 @@ class UserProfile(BaseModel):
         verbose_name_plural = 'user_profiles'
 
     def __unicode__(self):
-        return u'UserProfile:%s' % self.id
+        return u'UserProfile:%s:%s' % (self.id, self.sis_user_id)
 
 class Course(BaseModel):
     title = models.CharField(max_length=255)

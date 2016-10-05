@@ -53,7 +53,7 @@ class CollectionManifestController(object):
             self.manifest = self.create_manifest()
         if 'object_type' in self.request.GET and 'object_id' in self.request.GET:
             object_type = self.request.GET['object_type']
-            object_id = int(self.request.GET['object_id'])
+            object_id = self.request.GET['object_id']
             found_object = self.manifest.find_object(object_type, object_id)
             if found_object is None:
                 return None
@@ -208,6 +208,11 @@ class IIIFSequence(IIIFObject):
         self.canvases = []
 
     def add_canvas(self, canvas_id):
+        # Mirador relies on every canvas having a unique URI, so in case we have duplicate image
+        # objects in the manifest (i.e. duplicate canvases), we'll add an index to each canvas_id
+        # to ensure uniqueness within the manifest.
+        index = len(self.canvases)
+        canvas_id = "%s.%s" % (canvas_id, index)
         canvas = IIIFCanvas(self.manifest, canvas_id)
         self.canvases.append(canvas)
         return canvas
@@ -240,7 +245,7 @@ class IIIFCanvas(IIIFObject):
         self.resource = None
 
     def add_image(self, image):
-        self.resource = IIIFImageResource(self.manifest, image['id'], image['url'], image['is_link'])
+        self.resource = IIIFImageResource(self.manifest, self.id, image['url'], image['is_link'])
         if image['width'] is not None:
             self.width = image['width']
         if image['height'] is not None:
