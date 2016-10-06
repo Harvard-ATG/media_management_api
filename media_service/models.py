@@ -163,13 +163,21 @@ class Resource(BaseModel, SortOrderModelMixin):
         ordering = ["course", "sort_order", "title"]
 
     def save(self, *args, **kwargs):
-        if not self.sort_order:
+        if self.course and not self.sort_order:
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
-        if not (isinstance(self.metadata, basestring) and len(self.metadata) > 0 and '[]' == self.metadata[0] + self.metadata[-1]):
+
+        # This code is to ensure we only ever have a JSON "list" saved in the metadata field.
+        # Note that rigorous validation of the data structure happens in the serializer. A better
+        # solution would be to implement a true "JSONField" with rigorous validation on the model.
+        try:
+            self.metadata = self.metadata if isinstance(json.loads(self.metadata), list) else self.metadata_default()
+        except (TypeError, ValueError):
             self.metadata = self.metadata_default()
+
         if self.media_store:
             self.media_store.reference_count += 1
             self.media_store.save()
+
         super(Resource, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

@@ -62,9 +62,9 @@ class TestResource(unittest.TestCase):
         title = "Test Resource"
         course = TestResource.test_course
         default_metadata = Resource.metadata_default()
-        missing_metadata = ["", None]
-        invalid_metadata = [json.dumps(v) for v in None, True, False, 123, {}]
-        valid_metadata = [json.dumps(v) for v in [], [{"label":"X", "value": "Y"}]]
+        missing_metadata = ("", None)
+        invalid_metadata = (None, True, False, 123, {})
+        valid_metadata = ([], [{"label":"X", "value": "Y"}])
         
         # check that missing or invalid metadata values are saved using the default value
         # for example the string "null" is not a valid value, so it should be overwritten with "[]"
@@ -76,9 +76,9 @@ class TestResource(unittest.TestCase):
         
         # check that valid metadata is saved unchanged
         for metadata in valid_metadata:
-            instance = Resource(course=course, title=title, metadata=metadata)
+            instance = Resource(course=course, title=title, metadata=json.dumps(metadata))
             instance.save()
-            self.assertEqual(metadata, instance.metadata)
+            self.assertEqual(json.dumps(metadata), instance.metadata)
 
 class TestUnicodeInput(unittest.TestCase):
     
