@@ -126,23 +126,24 @@ def metadata_validator(value):
     '''
 
     metadata = value
-    if not isinstance(metadata, list):
-        raise serializers.ValidationError("Metadata must be a *list* of pairs: [{'label': '', 'value': ''}, ...]. Given: %s" % type(metadata))
+    if metadata is not None:
+        if not isinstance(metadata, list):
+            raise serializers.ValidationError("Metadata must be a *list* of pairs: [{'label': '', 'value': ''}, ...]. Given: %s" % type(metadata))
 
-    required_fields = ('label', 'value')
-    for pair in metadata:
-        if not isinstance(pair, dict):
-            raise serializers.ValidationError("Metadata pair '%s' invalid. Must be a *dict*: {'label': '', 'value': ''}" % pair)
-        if set(pair.keys()) != set(required_fields):
-            raise serializers.ValidationError("Metadata pair '%s' invalid. Must contain keys: label, value" % pair)
-        if not isinstance(pair['label'], basestring) or not isinstance(pair['value'], basestring):
-            raise serializers.ValidationError("Metadata pair '%s' invalid. Label and value must be strings, not composite types." % pair)
+        required_fields = ('label', 'value')
+        for pair in metadata:
+            if not isinstance(pair, dict):
+                raise serializers.ValidationError("Metadata pair '%s' invalid. Must be a *dict*: {'label': '', 'value': ''}" % pair)
+            if set(pair.keys()) != set(required_fields):
+                raise serializers.ValidationError("Metadata pair '%s' invalid. Must contain keys: label, value" % pair)
+            if not isinstance(pair['label'], basestring) or not isinstance(pair['value'], basestring):
+                raise serializers.ValidationError("Metadata pair '%s' invalid. Label and value must be strings, not composite types." % pair)
 
 class ResourceSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     description = serializers.CharField(max_length=None, required=False, allow_blank=True)
-    metadata = serializers.JSONField(binary=False, required=False, validators=[metadata_validator])
+    metadata = serializers.JSONField(binary=False, required=False, allow_null=True, validators=[metadata_validator])
 
     class Meta:
         model = Resource
