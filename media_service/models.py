@@ -138,6 +138,7 @@ class Course(BaseModel):
     def __unicode__(self):
         return u'{0}:{1}:{2}'.format(self.id, self.lti_context_id, self.title)
 
+
 class Resource(BaseModel, SortOrderModelMixin):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
     owner = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='resources', null=True, blank=True)
@@ -153,7 +154,7 @@ class Resource(BaseModel, SortOrderModelMixin):
     thumb_height = models.PositiveIntegerField(null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    metadata = models.TextField(blank=True, default=json.dumps([]))
+    metadata = models.TextField(blank=True, default=lambda: Resource.metadata_default)
     sort_order = models.IntegerField(default=0)
 
     class Meta:
@@ -162,11 +163,21 @@ class Resource(BaseModel, SortOrderModelMixin):
         ordering = ["course", "sort_order", "title"]
 
     def save(self, *args, **kwargs):
-        if not self.sort_order:
+        if self.course and not self.sort_order:
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
+
+        # This code is to ensure we only ever have a JSON "list" saved in the metadata field.
+        # Note that rigorous validation of the data structure happens in the serializer. A better
+        # solution would be to implement a true "JSONField" with rigorous validation on the model.
+        try:
+            self.metadata = self.metadata if isinstance(json.loads(self.metadata), list) else self.metadata_default()
+        except (TypeError, ValueError):
+            self.metadata = self.metadata_default()
+
         if self.media_store:
             self.media_store.reference_count += 1
-            self.media_store.save() 
+            self.media_store.save()
+
         super(Resource, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
@@ -221,6 +232,11 @@ class Resource(BaseModel, SortOrderModelMixin):
     def get_course_images(cls, course_pk):
         images = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
         return images
+
+    @staticmethod
+    def metadata_default():
+        return json.dumps([])
+
     
 class Collection(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
