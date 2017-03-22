@@ -42,7 +42,7 @@ class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
             "course_image_id": resource.id,
             "title": resource.title,
             "description": resource.description,
-            "upload_file_name": resource.upload_file_name,
+            "original_file_name": resource.original_file_name,
             "is_upload": resource.is_upload,
         })
         data.update(resource_to_representation(resource))
@@ -147,33 +147,41 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Resource
-        fields = ('url', 'id', 'course_id', 'title', 'description', 'metadata', 'sort_order', 'upload_file_name', 'created', 'updated')
+        fields = ('url', 'id', 'course_id', 'title', 'description', 'metadata', 'sort_order', 'original_file_name', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
-        self.file_upload = kwargs.pop('file_upload', None)
+        self.is_upload = kwargs.pop('is_upload', None)
+        self.file_object = kwargs.pop('file_object', None)
+        self.file_url = kwargs.pop('file_url', None)
         super(ResourceSerializer, self).__init__(*args, **kwargs)
 
     def create(self, validated_data):
         request = self.context['request']
         course_id = validated_data['course_id']
-        title = validated_data['title']
+        title = validated_data.get('title', '')
         description = validated_data.get('description', '')
         metadata = validated_data.get('metadata', None)
 
-        upload_result = self.handle_file_upload()
-        if 'upload_file_name' in upload_result:
-            title = upload_result['upload_file_name']
+        media_store_instance = None
+        if self.file_object:
+            media_store_instance = self.handle_file_object()
+
+        original_file_name = ''
+        if self.is_upload:
+            title = original_file_name = self.file_object.name
+        elif self.file_url:
+            original_file_name = self.file_url
 
         resource_attrs = {
             "course": course_id,
             "title": title,
             "description": description,
             "owner": request.user.profile,
-            "media_store": upload_result['media_store'],
-            "upload_file_name": upload_result['upload_file_name'],
-            "is_upload": upload_result['is_upload'],
+            "media_store": media_store_instance,
+            "original_file_name": original_file_name,
+            "is_upload": self.is_upload,
         }
-        
+
         # Metadata cannot be null, so only include if it's non-null
         if metadata is not None:
             resource_attrs['metadata'] = json.dumps(metadata)
@@ -191,21 +199,13 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         instance.save()
         return instance
 
-    def handle_file_upload(self):
-        if not self.file_upload:
-            return {}
-
-        media_store_upload = MediaStoreUpload(self.file_upload)
+    def handle_file_object(self):
+        '''Uploads file object to the media store.'''
+        media_store_upload = MediaStoreUpload(self.file_object)
         if not media_store_upload.isValid():
-            raise exceptions.ValidationError("Failed to upload file '%s'. Error: %s" % (self.file_upload.name, media_store_upload.getErrors()))
-
+            raise exceptions.ValidationError("Failed to upload file object to media store. Error: %s" % media_store_upload.getErrors())
         media_store_instance = media_store_upload.save()
-        result = {
-            'media_store': media_store_instance,
-            'is_upload': True,
-            'upload_file_name': self.file_upload.name,
-        }
-        return result
+        return media_store_instance
 
     def to_representation(self, instance):
         data =  super(ResourceSerializer, self).to_representation(instance)

@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 import unittest
 import json
-from media_service.models import MediaStore, Collection, Course, Resource
+from media_service.models import MediaStore, Collection, Course, Resource, metadata_default
 
 class TestMediaStore(unittest.TestCase):
     test_items = [
@@ -61,7 +61,7 @@ class TestResource(unittest.TestCase):
     def test_save_with_metadata(self):
         title = "Test Resource"
         course = TestResource.test_course
-        default_metadata = Resource.metadata_default()
+        default_metadata = metadata_default()
         missing_metadata = ("", None)
         invalid_metadata = (None, True, False, 123, {})
         valid_metadata = ([], [{"label":"X", "value": "Y"}])
