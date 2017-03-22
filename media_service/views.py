@@ -102,12 +102,22 @@ class CollectionViewSet(viewsets.ModelViewSet):
     '''
 A **collection** resource is a grouping of *images*.
 
-Collection Endpoints
+Endpoints
 ----------------
 
-- `/collections`  Lists collections
-- `/collections/{pk}` Collection detail
-- `/collections/{pk}/images`  Lists a collection's images
+- `/collections`
+- `/collections/{pk}`
+
+Methods
+-------
+
+- `get /collections`  Lists collections
+- `post /collections` Creates new collection
+- `get /collections/{pk}` Retrieves collection details
+- `put /collections/{pk}` Updates collection
+- `delete /collections/{pk}` Deletes a collection
+- `get /collections/{pk}/images`  Lists a collection's images
+- `get /collections/{pk}/manifest` Collection IIIF manifest of images
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
@@ -137,6 +147,20 @@ Collection Endpoints
         return Response(data)
 
 class CourseCollectionsView(GenericAPIView):
+    '''
+A **course collections** resource is a set of *collections* that belong to a *course*.
+
+Endpoints
+----------------
+
+- `/courses/{pk}/collections`
+
+Methods
+-------
+
+- `get /courses/{pk}/collections`  Lists collections that belong to the course
+- `post /courses/{pk}/collections` Creates a new collection and adds it to the course
+    '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
     permission_classes = (CollectionEndpointPermission,)
@@ -160,6 +184,21 @@ class CourseCollectionsView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CourseImagesListView(GenericAPIView):
+    '''
+A **course images** resource is a set of *images* that belong to a *course*.
+This is also referred to as the course's image library.
+
+Endpoints
+----------------
+
+- `/courses/{pk}/images`
+
+Methods
+-------
+
+- `get /courses/{pk}/images`  Lists images that belong to the course
+- `post /courses/{pk}/images` Uploads an image to the course
+    '''
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
@@ -199,6 +238,20 @@ class CourseImagesListView(GenericAPIView):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 class CollectionImagesListView(GenericAPIView):
+    '''
+A **collection images** resource is a set of *images* that are associated with a *collection*.
+
+Endpoints
+----------------
+
+- `/collections/{pk}/images`
+
+Methods
+-------
+
+- `get /courses/{pk}/images`  Lists images that belong to the course
+- `post /courses/{pk}/images` Adds images to the collection that already exist in the course library.
+    '''
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsAuthenticated,)
@@ -222,6 +275,20 @@ class CollectionImagesListView(GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CollectionImagesDetailView(GenericAPIView):
+    '''
+A **collection images detail** resource describes an image that has been associated with a collection.
+
+Endpoints
+----------------
+
+- `collection-images/{pk}`
+
+Methods
+-------
+
+- `get /collection-images/{pk}` Retrieves details of image associated with collection
+- `delete /collection-images/{pk}` Removes the image from the collection
+    '''
     queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsAuthenticated,)
@@ -237,6 +304,21 @@ class CollectionImagesDetailView(GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class CourseImageViewSet(viewsets.ModelViewSet):
+    '''
+A **course images** resource is a set of *images* that are associated with a *collection*.
+
+Endpoints
+----------------
+
+- `/images`
+- `/images/{pk}`
+
+Methods
+-------
+
+- `get /images`  Lists images
+- `get /images/{pk}` Retrieves details of an image
+    '''
     queryset = Resource.objects.select_related('course', 'media_store')
     serializer_class = ResourceSerializer
     permission_classes = (ResourceEndpointPermission,)
