@@ -244,6 +244,8 @@ class TestUrlImport(unittest.TestCase):
             self.assertEqual(processed[url]["data"]["title"], item["title"])
             if "description" in item:
                 self.assertEqual(processed[url]["data"]["description"], item["description"])
+            else:
+                self.assertEqual(processed[url]["data"]["description"], "")
 
 class TestZipUpload(unittest.TestCase):
 

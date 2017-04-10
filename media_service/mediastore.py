@@ -77,7 +77,7 @@ def processRemoteImages(items):
             raise MediaStoreException("Missing 'url' for item %d in list of items: %s" % (index, items))
         data = {
             "title": item.get("title", "Untitled") or "Untitled",
-            "description": item.get("description", "Image retrieved from %s" % url),
+            "description": item.get("description", ""),
         }
         image_file = fetchRemoteImage(url)
         processed[url] = {
