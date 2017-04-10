@@ -20,13 +20,24 @@ from PIL import Image
 
 from media_service.models import MediaStore
 
+logger = logging.getLogger(__name__)
+
 # Required AWS settings
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_ACCESS_SECRET_KEY = settings.AWS_ACCESS_SECRET_KEY
 AWS_S3_BUCKET = settings.AWS_S3_BUCKET
 AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
 
-logger = logging.getLogger(__name__)
+# Configurable settings for media store
+VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png', 'pdf', 'tif', 'tiff')
+EXTENSION_FOR_IMAGE_TYPE = {
+    'image/jpeg': 'jpg',
+    'image/gif': 'gif',
+    'image/png': 'png',
+    'image/tiff': 'tif',
+    'image/pdf': 'pdf',
+}
+
 
 class MediaStoreException(Exception):
     pass
@@ -116,6 +127,7 @@ def processFileUploads(filelist):
     processed = dict(enumerate(newlist))
     return processed
 
+
 class MediaStoreUpload:
     '''
     The MediaStoreUpload class is responsible for storing a django UploadedFile.
@@ -142,13 +154,6 @@ class MediaStoreUpload:
         if media_store_upload.is_valid():
             media_store_instance = media_store_upload.save()
     '''
-    VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png', 'gif')
-    FILE_TYPE_TO_EXT = {
-        'image/jpeg': 'jpg',
-        'image/gif': 'gif',
-        'image/png': 'png',
-        'image/gif': 'gif',
-    }
 
     def __init__(self, uploaded_file):
 
@@ -204,7 +209,7 @@ class MediaStoreUpload:
         Validates that the image extension is valid.
         '''
         ext = self.getFileExtension()
-        valid_exts = self.VALID_IMAGE_EXTENSIONS
+        valid_exts = VALID_IMAGE_EXTENSIONS
         if ext not in valid_exts:
             self.error('extension', "Image extension '%s' is invalid, must be one of %s. " % (ext, valid_exts))
             return False
@@ -244,8 +249,9 @@ class MediaStoreUpload:
         k.key = self.getS3FileKey()
         self.file.seek(0)
 
-        logger.debug("Saving file to S3 bucket with key=%s" % k.key)
-        k.set_contents_from_file(self.file, replace=True)
+        headers = {"Content-Type": self.instance.file_type}
+        logger.debug("Saving file to S3 bucket with key=%s headers=%s" % (k.key, headers))
+        k.set_contents_from_file(self.file, replace=True, headers=headers)
 
         return True
 
@@ -321,8 +327,8 @@ class MediaStoreUpload:
         file_extension = ''
 
         # Attempt to get the file extension from its mime type
-        if file_type in self.FILE_TYPE_TO_EXT:
-            file_extension = self.FILE_TYPE_TO_EXT.get(file_type, '')
+        if file_type in EXTENSION_FOR_IMAGE_TYPE:
+            file_extension = EXTENSION_FOR_IMAGE_TYPE.get(file_type, '')
 
         # Otherwise fall back to the file name
         if not file_extension:
