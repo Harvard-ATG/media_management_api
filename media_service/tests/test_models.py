@@ -21,10 +21,10 @@ class TestMediaStore(unittest.TestCase):
             "file_extension": "gif",
             "file_type": "image/gif",
             "img_width": 24,
-            "img_height": 24,            
+            "img_height": 24,
         }
     ]
-    
+
     @classmethod
     def setUpClass(cls):
         for test_item in cls.test_items:
@@ -35,13 +35,13 @@ class TestMediaStore(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         MediaStore.objects.filter(pk__in=[x['pk'] for x in cls.test_items]).delete()
- 
+
     def test_get_image(self):
         queryset = MediaStore.objects.filter(pk__in=[x['pk'] for x in self.test_items])
         self.assertTrue(len(queryset) > 0)
         for media_store in queryset:
-            full_actual = media_store.get_image_full()
-            thumb_actual = media_store.get_image_thumb()
+            full_actual = media_store.get_iiif_full_url(thumb=False)
+            thumb_actual = media_store.get_iiif_full_url(thumb=True)
             thumb_w, thumb_h = media_store.calc_thumb_size()
             self.assertEqual(full_actual['width'], media_store.img_width)
             self.assertEqual(full_actual['height'], media_store.img_height)
@@ -52,7 +52,7 @@ class TestMediaStore(unittest.TestCase):
 
 class TestResource(unittest.TestCase):
     test_course = None
-    
+
     @classmethod
     def setUpClass(cls):
         cls.test_course = Course(title="Test Course" , lti_context_id="ABC123", lti_tool_consumer_instance_guid="canvas")
@@ -65,7 +65,7 @@ class TestResource(unittest.TestCase):
         missing_metadata = ("", None)
         invalid_metadata = (None, True, False, 123, {})
         valid_metadata = ([], [{"label":"X", "value": "Y"}])
-        
+
         # check that missing or invalid metadata values are saved using the default value
         # for example the string "null" is not a valid value, so it should be overwritten with "[]"
         for metadata in missing_metadata + invalid_metadata:
@@ -73,7 +73,7 @@ class TestResource(unittest.TestCase):
             instance.save()
             self.assertNotEqual(metadata, instance.metadata)
             self.assertEqual(default_metadata, instance.metadata)
-        
+
         # check that valid metadata is saved unchanged
         for metadata in valid_metadata:
             instance = Resource(course=course, title=title, metadata=json.dumps(metadata))
@@ -81,12 +81,12 @@ class TestResource(unittest.TestCase):
             self.assertEqual(json.dumps(metadata), instance.metadata)
 
 class TestUnicodeInput(unittest.TestCase):
-    
+
     def _createCourse(self, lti_context_id=None):
         course = Course(title="Test Course: %s" % lti_context_id, lti_context_id=lti_context_id, lti_tool_consumer_instance_guid="canavs")
         course.save()
         return course
-    
+
     def test_collection_title(self):
         titles = [
             'My Awesome Collection',
@@ -95,7 +95,7 @@ class TestUnicodeInput(unittest.TestCase):
              'Yet another awesome collection'
         ]
         course = self._createCourse(lti_context_id=1)
-        
+
         for title in titles:
             collection = Collection(title=title, course=course)
             collection.save()
@@ -104,4 +104,3 @@ class TestUnicodeInput(unittest.TestCase):
                 stringified_collection = str(collection)
             except UnicodeEncodeError as e:
                 self.fail('Converting the collection object to a string raised UnicodeEncodeError: %s' % e)
-
