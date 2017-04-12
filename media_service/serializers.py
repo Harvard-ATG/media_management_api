@@ -2,7 +2,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
 from media_service.models import MediaStore, Course, Collection, CollectionResource, Resource
-from media_service.mediastore import MediaStoreUpload
+from media_service import mediastore
 import json
 
 def resource_to_representation(resource):
@@ -201,9 +201,12 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
 
     def handle_file_object(self):
         '''Uploads file object to the media store.'''
-        media_store_upload = MediaStoreUpload(self.file_object)
-        if not media_store_upload.isValid():
-            raise exceptions.ValidationError("Failed to upload file object to media store. Error: %s" % media_store_upload.getErrors())
+        try:
+            media_store_upload = mediastore.MediaStoreUpload(self.file_object)
+            media_store_upload.raise_for_error()
+            media_store_upload.validate()
+        except mediastore.MediaStoreException as e:
+            raise exceptions.APIException(str(e))
         media_store_instance = media_store_upload.save()
         return media_store_instance
 

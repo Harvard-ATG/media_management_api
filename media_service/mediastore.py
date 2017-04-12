@@ -30,14 +30,15 @@ AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
 
 # Configurable settings for media store
 VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png', 'pdf', 'tif', 'tiff')
-EXTENSION_FOR_IMAGE_TYPE = {
+VALID_IMAGE_EXT_FOR_TYPE = {
     'image/jpeg': 'jpg',
     'image/gif': 'gif',
     'image/png': 'png',
     'image/tiff': 'tif',
     'image/pdf': 'pdf',
 }
-
+VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
+VALID_IMAGE_TYPES_DISPLAY = [t.replace('image/', '') for t in VALID_IMAGE_TYPES]
 
 class MediaStoreException(Exception):
     pass
@@ -165,6 +166,10 @@ class MediaStoreUpload:
         self._file_md5hash = None # holds cached MD5 hash of the file
         self._is_valid = True
         self._error = {}
+        self._raise_for_error = False
+
+    def raise_for_error(self):
+        self._raise_for_error = True
 
     @transaction.atomic
     def save(self):
@@ -188,9 +193,7 @@ class MediaStoreUpload:
         '''
         Returns true if the uploaded file is valid, false otherwise.
         '''
-        self.validateImageExtension()
-        self.validateImageOpens()
-
+        self.validate()
         logger.debug("isValid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
 
@@ -204,6 +207,23 @@ class MediaStoreUpload:
     def getErrors(self):
         return "".join([self._error[k] for k in sorted(self._error)])
 
+    def validate(self):
+        self.validateImageType()
+        self.validateImageOpens()
+        self.validateImageExtension()
+        return self
+
+    def validateImageType(self):
+        filetype = self.getFileType()
+        valid_types = VALID_IMAGE_TYPES
+        if filetype not in valid_types:
+            errmsg = "Image type '%s' is invalid, must be one of %s." % (filetype, valid_types)
+            self.error('type', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
+            return False
+        return True
+
     def validateImageExtension(self):
         '''
         Validates that the image extension is valid.
@@ -211,7 +231,10 @@ class MediaStoreUpload:
         ext = self.getFileExtension()
         valid_exts = VALID_IMAGE_EXTENSIONS
         if ext not in valid_exts:
-            self.error('extension', "Image extension '%s' is invalid, must be one of %s. " % (ext, valid_exts))
+            errmsg = "Image extension '%s' is invalid, must be one of %s. " % (ext, valid_exts)
+            self.error('extension', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
             return False
         return True
 
@@ -222,7 +245,10 @@ class MediaStoreUpload:
         try:
             Image.open(self.file)
         except Exception as e:
-            self.error('open', "Image cannot be opened or identified [%s]. " % str(e))
+            errmsg = "Image cannot be opened or identified [%s]. " % str(e)
+            self.error('open', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
             return False
         return True
 
@@ -327,8 +353,8 @@ class MediaStoreUpload:
         file_extension = ''
 
         # Attempt to get the file extension from its mime type
-        if file_type in EXTENSION_FOR_IMAGE_TYPE:
-            file_extension = EXTENSION_FOR_IMAGE_TYPE.get(file_type, '')
+        if file_type in VALID_IMAGE_EXT_FOR_TYPE:
+            file_extension = VALID_IMAGE_EXT_FOR_TYPE.get(file_type, '')
 
         # Otherwise fall back to the file name
         if not file_extension:
