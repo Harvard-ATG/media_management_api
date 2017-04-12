@@ -38,7 +38,6 @@ VALID_IMAGE_EXT_FOR_TYPE = {
     'image/pdf': 'pdf',
 }
 VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
-VALID_IMAGE_TYPES_DISPLAY = [t.replace('image/', '') for t in VALID_IMAGE_TYPES]
 
 class MediaStoreException(Exception):
     pass
@@ -215,9 +214,8 @@ class MediaStoreUpload:
 
     def validateImageType(self):
         filetype = self.getFileType()
-        valid_types = VALID_IMAGE_TYPES
-        if filetype not in valid_types:
-            errmsg = "Image type '%s' is invalid, must be one of %s." % (filetype, valid_types)
+        if filetype not in VALID_IMAGE_TYPES:
+            errmsg = "Image type '%s' is not supported. Please ensure the image is one of the supported image types." %  filetype
             self.error('type', errmsg)
             if self._raise_for_error:
                 raise MediaStoreException(errmsg)
@@ -229,9 +227,8 @@ class MediaStoreUpload:
         Validates that the image extension is valid.
         '''
         ext = self.getFileExtension()
-        valid_exts = VALID_IMAGE_EXTENSIONS
-        if ext not in valid_exts:
-            errmsg = "Image extension '%s' is invalid, must be one of %s. " % (ext, valid_exts)
+        if ext not in VALID_IMAGE_EXTENSIONS:
+            errmsg = "Image extension '%s' is not recognized." % ext
             self.error('extension', errmsg)
             if self._raise_for_error:
                 raise MediaStoreException(errmsg)
@@ -245,7 +242,7 @@ class MediaStoreUpload:
         try:
             Image.open(self.file)
         except Exception as e:
-            errmsg = "Image cannot be opened or identified [%s]. " % str(e)
+            errmsg = "Image cannot be opened or identified."
             self.error('open', errmsg)
             if self._raise_for_error:
                 raise MediaStoreException(errmsg)
