@@ -64,7 +64,7 @@ def fetchRemoteImage(url):
     extension = guessImageExtensionFromUrl(url)
     suffix = '' if extension is None else '.' + extension
     f = tempfile.TemporaryFile(suffix=suffix)
-    res = requests.get(url)
+    res = requests.get(url, verify=False)
     logger.debug("Fetched remote image [%s]. Response status=%s headers=%s" % (url, res.status_code, res.headers))
 
     res.raise_for_status()
