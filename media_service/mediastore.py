@@ -70,7 +70,7 @@ def fetchRemoteImage(url):
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
 
         # Make explicit the image types we are willing to accept
-        'Accept': "{image_types}".format(image_types=', '.join(VALID_IMAGE_TYPES)),
+        'Accept': "{image_types},image/*;q=0.8".format(image_types=', '.join(VALID_IMAGE_TYPES)),
     }
 
     # Use HTTP for all requests because of SSL errors
