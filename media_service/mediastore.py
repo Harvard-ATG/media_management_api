@@ -9,6 +9,7 @@ import re
 import requests
 import tempfile
 import urlparse
+import contextlib
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
@@ -63,17 +64,40 @@ def fetchRemoteImage(url):
     '''
     extension = guessImageExtensionFromUrl(url)
     suffix = '' if extension is None else '.' + extension
-    f = tempfile.TemporaryFile(suffix=suffix)
-    res = requests.get(url, verify=False)
-    logger.debug("Fetched remote image [%s]. Response status=%s headers=%s" % (url, res.status_code, res.headers))
+    max_size = 10 * 1024 * 1024
+    request_headers = {
+        # Spoofing the user agent to work around image providers that reject requests from "robots" (403 forbidden response)
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
 
-    res.raise_for_status()
-    if 'Content-Type' in res.headers and 'image' not in res.headers['Content-Type']:
-        raise MediaStoreException("Invalid content type '%s' for URL" % res.headers['Content-Type'])
+        # Make explicit the image types we are willing to accept
+        'Accept': "{image_types}".format(image_types=', '.join(VALID_IMAGE_TYPES)),
+    }
 
-    for chunk in res.iter_content(chunk_size=1024*1024):
-        f.write(chunk)
-    return f
+    # Use HTTP for all requests because of SSL errors
+    url = "http://" + url[8:] if url.startswith("https://") else url
+
+    with contextlib.closing(requests.get(url, headers=request_headers, stream=True, verify=False)) as res:
+        logger.debug("Fetched remote image. Request url=%s headers=%s Response code=%s headers=%s" % (url, request_headers, res.status_code, res.headers))
+        res.raise_for_status()
+
+        # Check the size before attempting to download the response content
+        if int(res.headers['Content-Length']) > max_size:
+            raise MediaStoreException("Image is too large (%s > %s bytes)." % (res.headers['content-length'], max_size))
+        elif int(res.headers['Content-Length']) == 0:
+            raise MediaStoreException("Image is empty (0 bytes).")
+    
+        # Check to see that we got some kind of image in the response,
+        # with the intent that the image will be checked more thorougly by another method
+        if 'image' not in res.headers.get('Content-Type', ''):
+            raise MediaStoreException("Invalid content type '%s' for URL" % res.headers['Content-Type'])
+
+        # Save the image content to a temporary file
+        f = tempfile.TemporaryFile(suffix=suffix)
+        for chunk in res.iter_content(chunk_size=1024*1024):
+            f.write(chunk)
+        return f
+
+    return None
 
 def processRemoteImages(items):
     '''
