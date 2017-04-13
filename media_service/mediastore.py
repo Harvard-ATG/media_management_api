@@ -30,13 +30,12 @@ AWS_S3_BUCKET = settings.AWS_S3_BUCKET
 AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
 
 # Configurable settings for media store
-VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png', 'pdf', 'tif', 'tiff')
+VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png', 'tif', 'tiff')
 VALID_IMAGE_EXT_FOR_TYPE = {
     'image/jpeg': 'jpg',
     'image/gif': 'gif',
     'image/png': 'png',
     'image/tiff': 'tif',
-    'image/pdf': 'pdf',
 }
 VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
 
@@ -64,7 +63,7 @@ def fetchRemoteImage(url):
     '''
     extension = guessImageExtensionFromUrl(url)
     suffix = '' if extension is None else '.' + extension
-    max_size = 10 * 1024 * 1024
+    max_size = 10 * pow(2, 20) # 10 megabytes
     request_headers = {
         # Spoofing the user agent to work around image providers that reject requests from "robots" (403 forbidden response)
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
@@ -81,15 +80,16 @@ def fetchRemoteImage(url):
         res.raise_for_status()
 
         # Check the size before attempting to download the response content
-        if int(res.headers['Content-Length']) > max_size:
-            raise MediaStoreException("Image is too large (%s > %s bytes)." % (res.headers['content-length'], max_size))
-        elif int(res.headers['Content-Length']) == 0:
-            raise MediaStoreException("Image is empty (0 bytes).")
+        if 'content-length' in res.headers:
+            if int(res.headers['content-length']) > max_size:
+                raise MediaStoreException("Image is too large (%s > %s bytes)." % (res.headers['content-length'], max_size))
+            elif int(res.headers['content-length']) == 0:
+                raise MediaStoreException("Image is empty (0 bytes).")
     
         # Check to see that we got some kind of image in the response,
         # with the intent that the image will be checked more thorougly by another method
-        if 'image' not in res.headers.get('Content-Type', ''):
-            raise MediaStoreException("Invalid content type '%s' for URL" % res.headers['Content-Type'])
+        if 'image' not in res.headers.get('content-type', ''):
+            raise MediaStoreException("Invalid content type: %s. Expected an image type." % res.headers['content-type'])
 
         # Save the image content to a temporary file
         f = tempfile.TemporaryFile(suffix=suffix)
