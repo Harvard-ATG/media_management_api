@@ -38,7 +38,7 @@ class TestCourseEndpoint(APITestCase):
                         "description": "",
                         "metadata": "[]",
                         "sort_order": 0,
-                        "upload_file_name": None,
+                        "original_file_name": None,
                         "created": "2015-12-15T15:42:33.443434Z",
                         "updated": "2015-12-15T15:42:33.443434Z",
                         "type": "courseimages",
@@ -78,14 +78,14 @@ class TestCourseEndpoint(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(courses))
-        
+
         # Example of what we would expect
         example_item = self.get_example_item()
         expected_keys = sorted(example_item.keys())
         for course_data in response.data:
             actual_keys = sorted(course_data.keys())
             self.assertEqual(actual_keys, expected_keys)
-    
+
     def test_course_detail(self):
         pk = 1
         course = Course.objects.get(pk=pk)
@@ -96,14 +96,14 @@ class TestCourseEndpoint(APITestCase):
         # Get an example response item
         example_item = self.get_example_item(detail=True)
         expected_keys = sorted(example_item.keys())
-        
+
         # Check course attributes
         nested_keys = ("images", "collections")
         course_keys = sorted([k for k in response.data if k not in nested_keys])
         expected_course_keys = sorted([k for k in example_item.keys() if k not in nested_keys])
         self.assertEqual(course_keys, expected_course_keys)
         self.assertTrue(all([ k in response.data for k in nested_keys ]))
-        
+
         # Check nested items
         for nested_key in nested_keys:
             self.assertTrue(len(example_item[nested_key]) > 0)
@@ -115,7 +115,7 @@ class TestCourseEndpoint(APITestCase):
     def test_create_course(self):
         url = reverse('course-list')
         body = {
-            "title": "Test Course", 
+            "title": "Test Course",
             "lti_context_id": "e4d7f1b4ed2e42d15898f4b27b019da4",
             "lti_tool_consumer_instance_guid": "test.localhost"
         }
@@ -145,14 +145,14 @@ class TestCourseEndpoint(APITestCase):
         body = {
             "title": "Title Updated(!)",
             "lti_context_id": "updated_context_id",
-            "lti_tool_consumer_instance_guid": "updated_guid" 
+            "lti_tool_consumer_instance_guid": "updated_guid"
         }
 
         # Show that our update differs from the existing course object
         course_before_update = Course.objects.get(pk=pk)
         for f in body:
             self.assertNotEqual(getattr(course_before_update, f), body[f])
-        
+
         # Do the update
         response = self.client.put(url, body)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -168,7 +168,7 @@ class TestCourseEndpoint(APITestCase):
         pk = 1
         url = reverse('course-collections', kwargs={"pk": pk})
         body = {
-            "title": "Test Collection", 
+            "title": "Test Collection",
             "description": "Some description",
         }
 
@@ -184,7 +184,7 @@ class TestCourseEndpoint(APITestCase):
         for f in body:
             self.assertEqual(response.data[f], body[f])
             self.assertEqual(getattr(created_collection, f), body[f])
-    
+
 class TestCollectionEndpoint(APITestCase):
     fixtures = ['test.json']
 
@@ -200,7 +200,7 @@ class TestCollectionEndpoint(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(collections))
-        
+
         # Example of what we would expect
         example_item = {
             "url": "http://localhost:8000/collections/1",
@@ -249,7 +249,7 @@ class TestCollectionEndpoint(APITestCase):
     def test_create_collection(self):
         url = reverse('collection-list')
         body = {
-            "title": "Test Collection", 
+            "title": "Test Collection",
             "description": "Some description",
             "course_id": 1,
         }
@@ -296,4 +296,3 @@ class TestCollectionEndpoint(APITestCase):
 
         course_image_ids = collection_after_update.resources.values_list('resource__pk', flat=True)
         self.assertSequenceEqual(response.data['course_image_ids'], course_image_ids)
-

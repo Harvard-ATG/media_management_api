@@ -12,7 +12,7 @@ class TestCollectionManifestController(TestCase):
         pk = 1
         collection = Collection.objects.get(pk=pk)
         self.assertEqual(collection.pk, pk)
-        
+
         request = self.factory.get('/')
         collection_manifest_controller = CollectionManifestController(request, collection)
         data = collection_manifest_controller.get_data()
@@ -22,7 +22,7 @@ class TestCollectionManifestController(TestCase):
         self.assertEqual(sorted(data.keys()), sorted(expected_attrs))
         self.assertEqual(data['@context'], "http://iiif.io/api/presentation/2/context.json")
         self.assertEqual(data['@type'], "sc:Manifest")
-        
+
 class IIIFManifestTest(unittest.TestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -32,12 +32,12 @@ class IIIFManifestTest(unittest.TestCase):
 
     def get_images_list(self):
         images = [
-            {'id': 1, 'is_link': False, 'url': 'http://localhost:8000/loris/foo.jpg', 'label': 'foo.jpg', 'description': '', 'metadata': []},
-            {'id': 2, 'is_link': False, 'url': 'http://localhost:8000/loris/bar.jpg', 'label': 'bar.jpg', 'description': '', 'metadata': []},
-            {'id': 3, 'is_link': True, 'url': 'http://my.link/image.jpg', 'label': 'image.jpg', 'description': '', 'metadata': []},
+            {'id': 1, 'is_iiif': True, 'url': 'http://localhost:8000/loris/foo.jpg', 'label': 'foo.jpg', 'description': '', 'metadata': []},
+            {'id': 2, 'is_iiif': True, 'url': 'http://localhost:8000/loris/bar.jpg', 'label': 'bar.jpg', 'description': '', 'metadata': []},
+            {'id': 3, 'is_iiif': False, 'url': 'http://my.link/image.jpg', 'label': 'image.jpg', 'description': '', 'metadata': []},
             {
                 'id': 4,
-                'is_link': False,
+                'is_iiif': True,
                 'url': 'http://localhost:8000/loris/foo_bar_foo.png',
                 'label': 'foo_bar_foo.png',
                 'description': 'Foo Bar with Foo Again',
@@ -48,7 +48,7 @@ class IIIFManifestTest(unittest.TestCase):
             },
         ]
         return images
-    
+
     def duplicate_image(self, images, image_id, num_duplicates=1):
         '''
         Given a list of images, find an image by ID and duplicate it.
@@ -63,13 +63,12 @@ class IIIFManifestTest(unittest.TestCase):
         images = self.get_images_list()
         manifest = self.create_manifest(1, images=self.get_images_list())
         md = manifest.to_dict()
-        
-        non_link_images = [img for img in images if img['is_link'] is False]
+        iiif_images = [img for img in images if img['is_iiif'] is True]
 
         self.assertEqual(len(md['sequences']), 1, "should have one default sequence")
-        self.assertEqual(len(md['sequences'][0]['canvases']), len(non_link_images), "one canvas per image")
-        for idx, canvas in enumerate(md['sequences'][0]['canvases']): 
-            self.assertEqual(canvas['label'], non_link_images[idx]['label'], "canvas label should match image label")
+        self.assertEqual(len(md['sequences'][0]['canvases']), len(iiif_images), "one canvas per image")
+        for idx, canvas in enumerate(md['sequences'][0]['canvases']):
+            self.assertEqual(canvas['label'], iiif_images[idx]['label'], "canvas label should match image label")
 
     def test_manifest_attributes(self):
         label = 'test label'
@@ -77,7 +76,7 @@ class IIIFManifestTest(unittest.TestCase):
         manifest_id = 1
         manifest = self.create_manifest(manifest_id, label=label, description=description)
         md = manifest.to_dict()
-        
+
         expected_attr = {
             "@context": "http://iiif.io/api/presentation/2/context.json",
             "@type": "sc:Manifest",
@@ -86,11 +85,11 @@ class IIIFManifestTest(unittest.TestCase):
             "description": description,
             "sequences": []
         }
-        
+
         for key in expected_attr.keys():
             self.assertTrue(key in md, "manifest should have a %s attribute" % key)
             self.assertEqual(md[key], expected_attr[key])
-    
+
     def test_manifest_has_unique_canvas_ids(self):
         # create a new list of images with duplicates of first and last image
         images = self.get_images_list()
@@ -102,7 +101,7 @@ class IIIFManifestTest(unittest.TestCase):
 
         # expect there to be duplicates added to the list
         self.assertEqual(total_duplicates + len(self.get_images_list()), len(images))
-        
+
         # generate manifest from the images
         manifest_id = 1
         manifest_obj = self.create_manifest(manifest_id, images=images)
@@ -116,6 +115,6 @@ class IIIFManifestTest(unittest.TestCase):
                 seen.add(canvas_id)
             else:
                 dups.append(canvas_id)
-        
+
         # expect there to be no duplicate canvas IDs in the manifest
         self.assertEqual(0, len(dups))

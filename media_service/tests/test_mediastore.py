@@ -2,9 +2,13 @@ import unittest
 import base64
 import re
 import zipfile
+import tempfile
+import mock
+import requests
 from mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
-from media_service.mediastore import MediaStoreUpload, MediaStoreUploadException, processFileUploads
+from media_service import mediastore
+from media_service.mediastore import MediaStoreUpload, MediaStoreException
 from media_service.models import MediaStore
 
 TEST_FILES = {
@@ -143,7 +147,7 @@ class TestMediaStoreUpload(unittest.TestCase):
 
         with self.assertRaises(Exception) as context:
             media_store_upload.getS3FileKey()
-        self.assertTrue(isinstance(context.exception, MediaStoreUploadException))
+        self.assertTrue(isinstance(context.exception, MediaStoreException))
 
         media_store = media_store_upload.save()
         self.assertTrue(media_store_upload.getS3FileKey())
@@ -185,8 +189,8 @@ class TestMediaStoreUpload(unittest.TestCase):
     def testInvalidImage(self):
         test_file = self.test_files['empty.jpg']
         media_store_upload = self.createMediaStoreUpload(test_file)
-        self.assertTrue(media_store_upload.validateImageExtension())
         self.assertFalse(media_store_upload.validateImageOpens())
+        self.assertTrue(media_store_upload.validateImageExtension())
         self.assertFalse(media_store_upload.isValid())
 
     def testImageJpegExtensionNormalized(self):
@@ -196,6 +200,52 @@ class TestMediaStoreUpload(unittest.TestCase):
         self.assertEqual(media_store_upload.getFileExtension(), normalized_jpeg_extension)
         self.assertTrue(media_store_upload.validateImageExtension())
 
+class TestUtilFunctions(unittest.TestCase):
+    def testGuessImageExtensionFromUrl(self):
+        def guess(url):
+            ''' Short wrapper function, purely for convenience and concise asserts...'''
+            return mediastore.guessImageExtensionFromUrl(url)
+        self.assertEqual("jpeg", guess('https://example.com/profile_images/466953024271679488/3rftwYWT.jpeg'))
+        self.assertEqual("jpg", guess('https://example.com/commons/thumb/c/c7/Harvard_square_harvard_yard.JPG/300px-Harvard_square_harvard_yard.JPG'))
+        self.assertEqual("gif", guess('http://example.com/static/xyz/files/horizontal_large_nobg.gif?m=1489563850&_q=1'))
+        self.assertEqual("png", guess('https://site.example.com/sites/default/files/_landing_carousel/Ext-538-carousel.png'))
+        self.assertEqual(None, guess('http://static1.example.com/static/5581f1f1e4b0be63c4780f1a/t/5584a36c/?format=1500w'))
+
+class TestUrlImport(unittest.TestCase):
+    def mockFetchRemoteImage(self):
+        '''
+        Returns a function mocking mediastore.fetchRemoteImage()
+        so that it always returns a dummy file.
+        '''
+        temp_image_file = tempfile.NamedTemporaryFile(mode='r')
+        def mock_fetch(url):
+            return temp_image_file
+        return mock_fetch
+
+    @patch('media_service.mediastore.fetchRemoteImage')
+    def testProcessRemoteImages(self, mock_fetch):
+        mock_fetch.return_value = self.mockFetchRemoteImage()
+        request_data = {
+            "items": [
+                {"url": "http://example.com/logo.jpg", "title": "Logo"},
+                {"url": "http://example.com/logo2.png", "title": "Logo2", "description": "Another logo"},
+            ]
+        }
+
+        processed = mediastore.processRemoteImages(request_data['items'])
+        self.assertTrue(processed is not None)
+        self.assertEqual(len(processed), len(request_data['items']))
+        for item in request_data['items']:
+            url = item['url']
+            self.assertTrue(url in processed)
+            self.assertEqual(sorted(processed[url].keys()), ["data", "file"])
+            expected_data = {"title": item["title"]}
+            self.assertEqual(sorted(processed[url]["data"].keys()), ["description", "title"])
+            self.assertEqual(processed[url]["data"]["title"], item["title"])
+            if "description" in item:
+                self.assertEqual(processed[url]["data"]["description"], item["description"])
+            else:
+                self.assertEqual(processed[url]["data"]["description"], "")
 
 class TestZipUpload(unittest.TestCase):
 
@@ -211,13 +261,13 @@ class TestZipUpload(unittest.TestCase):
         files = [testZip]
         mock_zip.return_value = testZip
         mock_is_zipfile.return_value = True
-        files = processFileUploads(files)
+        files = mediastore.processFileUploads(files)
         self.assertEqual(len(files), 2)
         self.assertNotIn(testZip, files)
 
         testZip.write('some_directory/')
         files = [testZip]
-        files = processFileUploads(files)
+        files = mediastore.processFileUploads(files)
         self.assertEqual(len(files), 2)
         self.assertNotIn('some_directory/', files)
 

@@ -47,51 +47,42 @@ class MediaStore(BaseModel):
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.file_name)
 
-    def get_image_full(self):
-        w, h = (self.img_width, self.img_height)
-        url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(encode=True),
-            "region": "full",
-            "size": "full",
-            "rotation": 0,
-            "quality": "default",
-            "format": self.file_extension,
-        })
-        full = {"width": w, "height": h, "url": url}
-        return full
-
-    def get_image_thumb(self):
-        w, h = self.calc_thumb_size()
-        url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(encode=True),
-            "region": "full",
-            "size": "{thumb_w},{thumb_h}".format(thumb_w=w, thumb_h=h),
-            "rotation": 0,
-            "quality": "default",
-            "format": self.file_extension,
-        })
-        thumb = {"width": w, "height": h, "url": url}
-        return thumb
-
-    def calc_thumb_size(self):
-        w, h = (self.img_width, self.img_height)
-        if h > 200:
-            thumb_h = 200
-            thumb_w = int((float(w) / h) * thumb_h)
-        else:
-            thumb_h = h
-            thumb_w = w
-        return thumb_w, thumb_h
-    
     def get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
         if encode:
-            identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!        
+            identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
         return identifier
 
     def get_iiif_base_url(self):
         identifier = self.get_iiif_identifier(encode=True)
         return '{base_url}{identifier}'.format(base_url=IIIF_IMAGE_SERVER_URL, identifier=identifier)
+
+    def get_iiif_full_url(self, desired_format="jpg", thumb=False):
+        w, h = (self.img_width, self.img_height)
+        size = "full"
+        if thumb:
+            w, h = self.calc_thumb_size()
+            size = "{thumb_w},{thumb_h}".format(thumb_w=w, thumb_h=h)
+
+        url = MediaStore.make_iiif_image_server_url({
+            "identifier": self.get_iiif_identifier(encode=True),
+            "region": "full",
+            "size": size,
+            "rotation": 0,
+            "quality": "default",
+            "format": desired_format,
+        })
+        return {"width": w, "height": h, "url": url}
+
+    def calc_thumb_size(self, max_height=200):
+        w, h = (self.img_width, self.img_height)
+        if h > max_height:
+            thumb_h = max_height
+            thumb_w = int((float(w) / h) * thumb_h)
+        else:
+            thumb_h = h
+            thumb_w = w
+        return thumb_w, thumb_h
 
     def get_s3_keyname(self):
         return "{prefix}/images/{pk}/{file_name}".format(prefix=AWS_S3_KEY_PREFIX, pk=self.pk, file_name=self.file_name)
@@ -138,13 +129,15 @@ class Course(BaseModel):
     def __unicode__(self):
         return u'{0}:{1}:{2}'.format(self.id, self.lti_context_id, self.title)
 
+def metadata_default():
+    return json.dumps([])
 
 class Resource(BaseModel, SortOrderModelMixin):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='resources')
     owner = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='resources', null=True, blank=True)
     media_store = models.ForeignKey(MediaStore, null=True, on_delete=models.SET_NULL)
     is_upload = models.BooleanField(default=True, null=False)
-    upload_file_name = models.CharField(max_length=4096, null=True)
+    original_file_name = models.CharField(max_length=4096, null=True)
     img_type = models.CharField(max_length=128, null=True, blank=True)
     img_url = models.CharField(max_length=4096, null=True, blank=True)
     img_width = models.PositiveIntegerField(null=True, blank=True)
@@ -154,7 +147,7 @@ class Resource(BaseModel, SortOrderModelMixin):
     thumb_height = models.PositiveIntegerField(null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    metadata = models.TextField(blank=True, default=lambda: Resource.metadata_default)
+    metadata = models.TextField(blank=True, default=metadata_default)
     sort_order = models.IntegerField(default=0)
 
     class Meta:
@@ -170,9 +163,9 @@ class Resource(BaseModel, SortOrderModelMixin):
         # Note that rigorous validation of the data structure happens in the serializer. A better
         # solution would be to implement a true "JSONField" with rigorous validation on the model.
         try:
-            self.metadata = self.metadata if isinstance(json.loads(self.metadata), list) else self.metadata_default()
+            self.metadata = self.metadata if isinstance(json.loads(self.metadata), list) else metadata_default()
         except (TypeError, ValueError):
-            self.metadata = self.metadata_default()
+            self.metadata = metadata_default()
 
         if self.media_store:
             self.media_store.reference_count += 1
@@ -183,8 +176,8 @@ class Resource(BaseModel, SortOrderModelMixin):
     def delete(self, *args, **kwargs):
         if self.media_store:
             self.media_store.reference_count -= 1
-            self.media_store.save() 
-        super(Resource, self).delete(*args, **kwargs)    
+            self.media_store.save()
+        super(Resource, self).delete(*args, **kwargs)
 
     def get_representation(self):
         if self.media_store is None:
@@ -197,8 +190,8 @@ class Resource(BaseModel, SortOrderModelMixin):
             thumb_height = self.thumb_height
             iiif_base_url = None
         else:
-            thumb = self.media_store.get_image_thumb()
-            full = self.media_store.get_image_full()
+            thumb = self.media_store.get_iiif_full_url(thumb=True)
+            full = self.media_store.get_iiif_full_url(thumb=False)
             iiif_base_url = self.media_store.get_iiif_base_url()
             image_type = self.media_store.file_type
             image_url = full['url']
@@ -218,7 +211,7 @@ class Resource(BaseModel, SortOrderModelMixin):
             "iiif_base_url": iiif_base_url,
         }
         return data
-    
+
     def load_metadata(self):
         try:
             return json.loads(self.metadata)
@@ -233,11 +226,7 @@ class Resource(BaseModel, SortOrderModelMixin):
         images = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
         return images
 
-    @staticmethod
-    def metadata_default():
-        return json.dumps([])
 
-    
 class Collection(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)

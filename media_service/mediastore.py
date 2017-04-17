@@ -6,6 +6,10 @@ import magic
 import logging
 import zipfile
 import re
+import requests
+import tempfile
+import urlparse
+import contextlib
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
@@ -17,21 +21,110 @@ from PIL import Image
 
 from media_service.models import MediaStore
 
+logger = logging.getLogger(__name__)
+
 # Required AWS settings
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_ACCESS_SECRET_KEY = settings.AWS_ACCESS_SECRET_KEY
 AWS_S3_BUCKET = settings.AWS_S3_BUCKET
 AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
 
-logger = logging.getLogger(__name__)
+# Configurable settings for media store
+VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png', 'tif', 'tiff')
+VALID_IMAGE_EXT_FOR_TYPE = {
+    'image/jpeg': 'jpg',
+    'image/gif': 'gif',
+    'image/png': 'png',
+    'image/tiff': 'tif',
+}
+VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
 
-class MediaStoreUploadException(Exception):
+class MediaStoreException(Exception):
     pass
+
+def guessImageExtensionFromUrl(url):
+    '''
+    Attempts to extract an image extension (jpg, png, etc) from the URL to the image.
+    Returns None when no extension can be identified.
+    '''
+    extension = None
+    o = urlparse.urlparse(url)
+    if '/' in o.path and len(o.path) > 1:
+        name = o.path.split('/')[-1]
+        if '.' in name:
+            extension = name.rsplit('.')[-1].lower()
+    return extension
+
+def fetchRemoteImage(url):
+    '''
+    Returns a temporary file object.
+    Raises a requests.exceptions.HTTPError if there's a 4xx or 5xx response.
+    Raises a MediaStoreException if the response content type header doesn't contain "image".
+    '''
+    extension = guessImageExtensionFromUrl(url)
+    suffix = '' if extension is None else '.' + extension
+    max_size = 10 * pow(2, 20) # 10 megabytes
+    request_headers = {
+        # Spoofing the user agent to work around image providers that reject requests from "robots" (403 forbidden response)
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
+
+        # Make explicit the image types we are willing to accept
+        'Accept': "{image_types},image/*;q=0.8".format(image_types=', '.join(VALID_IMAGE_TYPES)),
+    }
+
+    # Use HTTP for all requests because of SSL errors
+    url = "http://" + url[8:] if url.startswith("https://") else url
+
+    with contextlib.closing(requests.get(url, headers=request_headers, stream=True, verify=False)) as res:
+        logger.debug("Fetched remote image. Request url=%s headers=%s Response code=%s headers=%s" % (url, request_headers, res.status_code, res.headers))
+        res.raise_for_status()
+
+        # Check the size before attempting to download the response content
+        if 'content-length' in res.headers:
+            if int(res.headers['content-length']) > max_size:
+                raise MediaStoreException("Image is too large (%s > %s bytes)." % (res.headers['content-length'], max_size))
+            elif int(res.headers['content-length']) == 0:
+                raise MediaStoreException("Image is empty (0 bytes).")
+    
+        # Check to see that we got some kind of image in the response,
+        # with the intent that the image will be checked more thorougly by another method
+        if 'image' not in res.headers.get('content-type', ''):
+            raise MediaStoreException("Invalid content type: %s. Expected an image type." % res.headers['content-type'])
+
+        # Save the image content to a temporary file
+        f = tempfile.TemporaryFile(suffix=suffix)
+        for chunk in res.iter_content(chunk_size=1024*1024):
+            f.write(chunk)
+        return f
+
+    return None
+
+def processRemoteImages(items):
+    '''
+    process a list of remote images to import
+    returns a dict that maps image urls to image files that have been fetched and cached locally.
+    '''
+    logger.debug("Processing remote images: %s" % items)
+    processed = {}
+    for index, item in enumerate(items):
+        url = item.get('url', None)
+        if url is None:
+            raise MediaStoreException("Missing 'url' for item %d in list of items: %s" % (index, items))
+        data = {
+            "title": item.get("title", "Untitled") or "Untitled",
+            "description": item.get("description", ""),
+        }
+        image_file = fetchRemoteImage(url)
+        processed[url] = {
+            "file": File(image_file),
+            "data": data
+        }
+    return processed
 
 def processFileUploads(filelist):
     '''
     processes a file upload list, unzipping all zips
-    returns a new list with unzipped files
+    returns a dict that maps indexes to processed file objects
     '''
     newlist = []
     for file in filelist:
@@ -47,7 +140,7 @@ def processFileUploads(filelist):
                 if "__MACOSX" in f or ".DS_Store" in f:
                     logger.debug("Skipping MAC OS X resource file artifact: %s" % f)
                     continue
-                    
+
                 zf = zip.open(f).read()
                 newfile = File(io.BytesIO(zf))
                 newfile.name = f
@@ -55,7 +148,9 @@ def processFileUploads(filelist):
         else:
             newlist.append(file)
 
-    return newlist
+    processed = dict(enumerate(newlist))
+    return processed
+
 
 class MediaStoreUpload:
     '''
@@ -76,25 +171,28 @@ class MediaStoreUpload:
         - is_valid()
 
     Exceptions:
-        - MediaStoreUploadException
+        - MediaStoreException
 
     Example usage:
         media_store_upload = MediaStoreUpload(file=request.FILES['upload'])
         if media_store_upload.is_valid():
             media_store_instance = media_store_upload.save()
     '''
-    VALID_IMAGE_EXTENSIONS = ('jpg', 'gif', 'png')
 
     def __init__(self, uploaded_file):
 
         if not isinstance(uploaded_file, UploadedFile) and not isinstance(uploaded_file, File):
-            raise MediaStoreUploadException("File must be an instance of django.core.files.UploadedFile or django.core.files.base.File")
+            raise MediaStoreException("File must be an instance of django.core.files.UploadedFile or django.core.files.base.File")
 
         self.file = uploaded_file
         self.instance = None # Holds MediaStore instance
         self._file_md5hash = None # holds cached MD5 hash of the file
         self._is_valid = True
         self._error = {}
+        self._raise_for_error = False
+
+    def raise_for_error(self):
+        self._raise_for_error = True
 
     @transaction.atomic
     def save(self):
@@ -118,9 +216,7 @@ class MediaStoreUpload:
         '''
         Returns true if the uploaded file is valid, false otherwise.
         '''
-        self.validateImageExtension()
-        self.validateImageOpens()
-
+        self.validate()
         logger.debug("isValid: %s errors: %s" % (self._is_valid, self.getErrors()))
         return self._is_valid
 
@@ -134,14 +230,32 @@ class MediaStoreUpload:
     def getErrors(self):
         return "".join([self._error[k] for k in sorted(self._error)])
 
+    def validate(self):
+        self.validateImageType()
+        self.validateImageOpens()
+        self.validateImageExtension()
+        return self
+
+    def validateImageType(self):
+        filetype = self.getFileType()
+        if filetype not in VALID_IMAGE_TYPES:
+            errmsg = "Image type '%s' is not supported. Please ensure the image is one of the supported image types." %  filetype
+            self.error('type', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
+            return False
+        return True
+
     def validateImageExtension(self):
         '''
         Validates that the image extension is valid.
         '''
         ext = self.getFileExtension()
-        valid_exts = self.VALID_IMAGE_EXTENSIONS
-        if ext not in valid_exts:
-            self.error('extension', "Image extension '%s' is invalid [must be one of %s]. " % (ext, valid_exts))
+        if ext not in VALID_IMAGE_EXTENSIONS:
+            errmsg = "Image extension '%s' is not recognized." % ext
+            self.error('extension', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
             return False
         return True
 
@@ -152,7 +266,10 @@ class MediaStoreUpload:
         try:
             Image.open(self.file)
         except Exception as e:
-            self.error('open', "Image cannot be opened or identified [%s]. " % str(e))
+            errmsg = "Image cannot be opened or identified."
+            self.error('open', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
             return False
         return True
 
@@ -179,8 +296,9 @@ class MediaStoreUpload:
         k.key = self.getS3FileKey()
         self.file.seek(0)
 
-        logger.debug("Saving file to S3 bucket with key=%s" % k.key)
-        k.set_contents_from_file(self.file, replace=True)
+        headers = {"Content-Type": self.instance.file_type}
+        logger.debug("Saving file to S3 bucket with key=%s headers=%s" % (k.key, headers))
+        k.set_contents_from_file(self.file, replace=True, headers=headers)
 
         return True
 
@@ -252,19 +370,26 @@ class MediaStoreUpload:
         '''
         Returns the lowercase file extension (no dot). Example: "jpg" or "gif"
         '''
-        name_parts = os.path.splitext(self.file.name)
-        logger.debug("getFileExtension: %s" % self.file.name)
+        file_type = self.getFileType()
         file_extension = ''
-        if len(name_parts) > 1:
-            file_extension = name_parts[1]
-            if file_extension[0] == '.':
-                file_extension = file_extension[1:]
-        file_extension = file_extension.lower()
 
-        # Set canonical file extension, if applicable (i.e ."jpeg" -> "jpg")
-        canonical_map = {"jpeg": "jpg"}
-        if file_extension in canonical_map:
-            file_extension = canonical_map[file_extension]
+        # Attempt to get the file extension from its mime type
+        if file_type in VALID_IMAGE_EXT_FOR_TYPE:
+            file_extension = VALID_IMAGE_EXT_FOR_TYPE.get(file_type, '')
+
+        # Otherwise fall back to the file name
+        if not file_extension:
+            name_parts = os.path.splitext(self.file.name)
+            if len(name_parts) > 1:
+                file_extension = name_parts[1]
+                if len(file_extension) > 0 and file_extension[0] == '.':
+                    file_extension = file_extension[1:]
+            file_extension = file_extension.lower()
+
+            # Set canonical file extension for JPEGs (i.e ."jpeg" -> "jpg")
+            canonical_map = {"jpeg": "jpg"}
+            if file_extension in canonical_map:
+                file_extension = canonical_map[file_extension]
 
         return file_extension
 
@@ -302,7 +427,7 @@ class MediaStoreUpload:
         Returns the "key" name that will be used to store the file object in the S3 bucket.
         '''
         if not self.instance:
-            raise MediaStoreUploadException("MediaStore instance required to construct S3 key")
+            raise MediaStoreException("MediaStore instance required to construct S3 key")
         return self.instance.get_s3_keyname()
 
     def createFileName(self):

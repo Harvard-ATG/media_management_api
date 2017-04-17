@@ -13,7 +13,7 @@ class CollectionManifestController(object):
         self.request = request
         self.collection = collection
         self.manifest = None
-    
+
     def get_images(self):
         images = []
         collection_resources = self.collection.resources.all()
@@ -29,7 +29,7 @@ class CollectionManifestController(object):
                 "label": resource.title,
                 "description": resource.description,
                 "metadata": metadata,
-                "is_link": not resource.is_upload,
+                "is_iiif": resource.media_store is not None,
                 "width": width,
                 "height": height,
                 "url": url,
@@ -64,9 +64,9 @@ class CollectionManifestController(object):
 class IIIFObject(object):
     '''
     IIIF Object is the base object for IIIF presentation classes.
-    
+
     This class contains shared behaviors and methods that should be implemented.
-    
+
     See also: http://iiif.io/api/presentation/2.0/
     '''
     def build_url(self):
@@ -86,7 +86,7 @@ class IIIFObject(object):
 
     def __unicode__(self):
         '''Returns a string representation.'''
-        return self.to_json()    
+        return self.to_json()
 
 class IIIFManifest(IIIFObject):
     '''
@@ -94,7 +94,7 @@ class IIIFManifest(IIIFObject):
     of the collection.
 
     A Manifest object is composed of Sequence, Canvas, and ImageResource objects:
-    
+
     Manifest
         Sequence
             Canvas
@@ -103,9 +103,9 @@ class IIIFManifest(IIIFObject):
                 ImageResource
             Canvas
                 ImageResource
-    
+
     Each object must have a unique ID that can be mapped to a URL. For this implementation:
-    
+
         -the Manifest may be uniquely identified by the resource ID.
         -the Sequence may be uniquely identified by "1" because there is only
          one Sequence in this implementation.
@@ -114,14 +114,14 @@ class IIIFManifest(IIIFObject):
         -the ImageResource may be uniquely identified by the image ID.
 
     This is intended to be a minimal implementation of the IIIF 2.0 Presentation specification,
-    so not all features are supported. 
-    
+    so not all features are supported.
+
     Usage:
-    
+
     manifest = Manifest(1)
     manifest.create(images=[
-        {'id': 1, 'is_link': False, 'url': 'http://localhost:8000/loris/foo.jpg'},
-        {'id': 2, 'is_link': False, 'url': 'http://localhost:8000/loris/bar.jpg'}
+        {'id': 1, 'is_iiif': True, 'url': 'http://localhost:8000/loris/foo.jpg'},
+        {'id': 2, 'is_iiif': True, 'url': 'http://localhost:8000/loris/bar.jpg'}
     ])
     output = manifest.to_json()
     print output
@@ -140,7 +140,7 @@ class IIIFManifest(IIIFObject):
             images = []
         seq = self.add_sequence(1)
         for n, img in enumerate(images, start=1):
-            if not img['is_link']:
+            if img['is_iiif']:
                 can = seq.add_canvas(img['id'])
                 can.set_label(img['label'])
                 can.set_description(img['description'])
@@ -150,15 +150,15 @@ class IIIFManifest(IIIFObject):
                     'url': img['url'],
                     'height': img.get('height', None),
                     'width': img.get('width', None),
-                    'is_link': img.get('is_link', False),
+                    'is_iiif': img.get('is_iiif', True),
                 })
         return self
- 
+
     def add_sequence(self, sequence_id):
         sequence = IIIFSequence(self, sequence_id)
         self.sequences.append(sequence)
         return sequence
-    
+
     def find_object(self, object_type, object_id):
         if object_type == "manifest":
             if object_id == self.id:
@@ -176,7 +176,7 @@ class IIIFManifest(IIIFObject):
                 if object_id == c.resource.id:
                     return c.resource
         return None
-    
+
     def build_absolute_uri(self, url_name, url_args):
         url = self.base_manifest_url
         if url_args is not None:
@@ -216,7 +216,7 @@ class IIIFSequence(IIIFObject):
         canvas = IIIFCanvas(self.manifest, canvas_id)
         self.canvases.append(canvas)
         return canvas
-    
+
     def build_url(self):
         return self.manifest.build_absolute_uri('iiif:sequence', {
             'manifest_id': self.manifest.id,
@@ -245,19 +245,19 @@ class IIIFCanvas(IIIFObject):
         self.resource = None
 
     def add_image(self, image):
-        self.resource = IIIFImageResource(self.manifest, self.id, image['url'], image['is_link'])
+        self.resource = IIIFImageResource(self.manifest, self.id, image['url'], image['is_iiif'])
         if image['width'] is not None:
             self.width = image['width']
         if image['height'] is not None:
             self.height = image['height']
         return self
-    
+
     def set_label(self, label):
         self.label = label
-    
+
     def set_description(self, description):
         self.description = description
-    
+
     def set_metadata(self, metadata):
         self.metadata = metadata
 
@@ -290,12 +290,12 @@ class IIIFCanvas(IIIFObject):
         return canvas
 
 class IIIFImageResource(IIIFObject):
-    def __init__(self, manifest, resource_id, image_url, is_link=False):
+    def __init__(self, manifest, resource_id, image_url, is_iiif=False):
         self.manifest = manifest
         self.id = resource_id
         self.image_url = image_url
-        self.is_link = is_link
-        
+        self.is_iiif = is_iiif
+
     def build_url(self):
         return self.manifest.build_absolute_uri('iiif:resource', {
             'manifest_id': self.manifest.id,
@@ -304,7 +304,7 @@ class IIIFImageResource(IIIFObject):
         })
 
     def to_dict(self):
-        if self.is_link:
+        if not self.is_iiif:
             resource = {
                 "@id": self.image_url,
                 "@type": "dctypes:Image",
@@ -315,7 +315,7 @@ class IIIFImageResource(IIIFObject):
                 "@type": "dctypes:Image",
                 "service": {
                     "@id": self.image_url,
-                    "profile": "http://iiif.io/api/image/2/level1.json", 
+                    "profile": "http://iiif.io/api/image/2/level1.json",
                 }
             }
         return resource

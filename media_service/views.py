@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.exceptions import PermissionDenied
 
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
-from media_service.mediastore import MediaStoreUpload, processFileUploads
+from media_service.mediastore import MediaStoreUpload, processFileUploads, processRemoteImages
 from media_service.iiif import CollectionManifestController
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
@@ -211,24 +211,56 @@ Methods
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
-        course_pk = pk
+        logger.debug("request content_type=%s data=%s" % (request.content_type, request.data))
+        request_data = request.data.copy()
         course = get_object_or_404(Course, pk=pk)
-        file_param = 'file'
-        if file_param not in request.FILES:
-            raise exceptions.APIException("Error: missing '%s' parameter in upload" % file_param)
-        elif len(request.FILES) == 0:
-            raise exceptions.APIException("Error: no files uploaded")
-
+        request_data['course_id'] = course.pk
+        files = []
         response_data = []
-        logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
+        serializers = []
 
-        files = processFileUploads(request.FILES.getlist(file_param))
+        # Handle images uploaded directly
+        if request.content_type.startswith("multipart/form-data"):
+            file_param = 'file'
+            if file_param not in request.FILES:
+                raise exceptions.APIException("Error: missing '%s' parameter in upload" % file_param)
+            elif len(request.FILES) == 0:
+                raise exceptions.APIException("Error: no files uploaded")
+            logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
+            processed_uploads = processFileUploads(request.FILES.getlist(file_param))
+            for index, f in processed_uploads.iteritems():
+                data = request_data.copy()
+                logger.debug("Processing file upload: %s" % f.name)
+                serializer = ResourceSerializer(data=data, context={'request': request}, is_upload=True, file_object=f)
+                serializers.append(serializer)
 
-        for file_upload in files:
-            logger.debug("Processing file upload: %s" % file_upload.name)
-            data = request.data.copy()
-            data['course_id'] = course.pk
-            serializer = ResourceSerializer(data=data, context={'request': request}, file_upload=file_upload)
+        # Handle import of images by URL, provided in a JSON message
+        elif request.content_type.startswith("application/json"):
+            logger.debug("Request data: %s" % request_data)
+            MAX_IMAGE_ITEMS = 10 # max number of item urls that we will import at a time
+            if 'items' not in request_data or not isinstance(request_data['items'], list):
+                raise exceptions.APIException("Error: missing 'items' parameter for JSON upload")
+            elif len(request_data['items']) == 0:
+                raise exceptions.APIException("Error: empty image items")
+            elif len(request_data['items']) > MAX_IMAGE_ITEMS:
+                raise exceptions.APIException("Error: exceeded maximum number of image items (max=%d)." % MAX_IMAGE_ITEMS)
+            try:
+                processed_items = processRemoteImages(request_data['items'])
+            except Exception as e:
+                raise exceptions.APIException(str(e))
+
+            for url, item in processed_items.iteritems():
+                f = item['file']
+                data = item['data'].copy()
+                data['course_id'] = course.pk
+                logger.debug("Processing image url=%s file=%s data=%s" % (url, f.name, data))
+                serializer = ResourceSerializer(data=data, context={'request': request}, is_upload=False, file_object=f, file_url=url)
+                serializers.append(serializer)
+        else:
+            raise exceptions.APIException("Error: content type '%s' not supported" % request.content_type)
+
+        # Complete the process by serializing the resources
+        for serializer in serializers:
             if serializer.is_valid():
                 serializer.save()
                 response_data.append(serializer.data)
