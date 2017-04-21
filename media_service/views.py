@@ -159,8 +159,37 @@ Endpoints
 Methods
 -------
 
-- `get /courses/{pk}/collections`  Lists collections that belong to the course
-- `post /courses/{pk}/collections` Creates a new collection and adds it to the course
+- `GET /courses/{pk}/collections`  Lists collections that belong to the course
+- `POST /courses/{pk}/collections` Creates a new collection and adds it to the course
+- `PUT /courses/{pk}/collections`  Updates collections
+
+Details
+-------
+
+### Updating the order of collections in one batch
+
+Provide an array of collection IDs:
+
+    PUT /courses/{pk}/collections
+    {
+	    "sort_order": [1,7,6,5,3,2]
+    }
+
+### Updating the details of collections in one batch
+
+Provide an array of items, which are just collection objects:
+
+    PUT /courses/{pk}/collections
+    {
+        "items": [{
+            "id": 1,
+            "title": "Collection #1"
+        }, {
+            "id": 2,
+            "title": "Collection #2"
+        }]
+    }
+
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
@@ -196,12 +225,11 @@ Methods
             if not (set(collection_ids) == set(data['sort_order'])):
                 raise exceptions.APIException("Error updating sort order: set mismatch")
             with transaction.atomic():
-                logger.debug("Got sort_order: %s" % data['sort_order'])
-                for index, collection_id in enumerate(data['sort_order']):
+                for index, collection_id in enumerate(data['sort_order'], start=1):
                     collection = collection_map[collection_id]
                     collection.sort_order = index
                     collection.save()
-                    logger.debug("Order %s collection %s" % (index, collection.pk))
+                    logger.debug("Updated collection=%s sort_order=%s" % (collection.pk, collection.sort_order))
             return Response({"message": "Sort order updated in course" })
 
         # Or update each collection object as a whole
@@ -215,7 +243,7 @@ Methods
             for serializer in serializers:
                 if serializer.is_valid():
                     serializer.save()
-            return
+            return Response([s.data for s in serializers])
 
 
 class CourseImagesListView(GenericAPIView):
