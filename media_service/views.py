@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from rest_framework import viewsets, status, exceptions
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -182,6 +183,40 @@ Methods
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, pk=None, format=None):
+        course_pk = pk
+        collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
+        data = request.data.copy()
+
+        # Shortcut to just update the order of collections
+        if 'sort_order' in data:
+            collection_map = dict([(c.pk, c) for c in collections])
+            collection_ids = [c.pk for c in collections]
+            if not (set(collection_ids) == set(data['sort_order'])):
+                raise exceptions.APIException("Error updating sort order: set mismatch")
+            with transaction.atomic():
+                logger.debug("Got sort_order: %s" % data['sort_order'])
+                for index, collection_id in enumerate(data['sort_order']):
+                    collection = collection_map[collection_id]
+                    collection.sort_order = index
+                    collection.save()
+                    logger.debug("Order %s collection %s" % (index, collection.pk))
+            return Response({"message": "Sort order updated in course" })
+
+        # Or update each collection object as a whole
+        elif 'items' in data:
+            serializers = []
+            for item in data['items']:
+                serializer = CollectionSerializer(data=item, context={'request': request})
+                serializers.append(serializer)
+                if not serializer.is_valid():
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            for serializer in serializers:
+                if serializer.is_valid():
+                    serializer.save()
+            return
+
 
 class CourseImagesListView(GenericAPIView):
     '''
