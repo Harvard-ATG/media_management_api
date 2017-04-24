@@ -183,10 +183,14 @@ Provide an array of items, which are just collection objects:
     {
         "items": [{
             "id": 1,
-            "title": "Collection #1"
+            "title": "Collection #1",
+            "description": "Foo",
+            "sort_order": 1
         }, {
             "id": 2,
-            "title": "Collection #2"
+            "title": "Collection #2",
+            "description": "Bar",
+            "sort_order": 2
         }]
     }
 
@@ -216,34 +220,44 @@ Provide an array of items, which are just collection objects:
     def put(self, request, pk=None, format=None):
         course_pk = pk
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
+        collection_ids = [c.pk for c in collections]
+        collection_map = dict([(c.pk, c) for c in collections])
         data = request.data.copy()
 
         # Shortcut to just update the order of collections
         if 'sort_order' in data:
-            collection_map = dict([(c.pk, c) for c in collections])
-            collection_ids = [c.pk for c in collections]
             if not (set(collection_ids) == set(data['sort_order'])):
-                raise exceptions.APIException("Error updating sort order: set mismatch")
+                mismatch = list(set(collection_ids) - set(data['sort_order']))
+                raise exceptions.APIException("Error updating sort order. Missing or invalid collection IDs. Set mismatch: %s" % mismatch)
             with transaction.atomic():
                 for index, collection_id in enumerate(data['sort_order'], start=1):
                     collection = collection_map[collection_id]
                     collection.sort_order = index
                     collection.save()
                     logger.debug("Updated collection=%s sort_order=%s" % (collection.pk, collection.sort_order))
-            return Response({"message": "Sort order updated in course" })
+            return Response({"message": "Sort order updated", "data": data['sort_order'] })
 
-        # Or update each collection object as a whole
+        # Update a batch of collections
         elif 'items' in data:
-            serializers = []
             for item in data['items']:
-                serializer = CollectionSerializer(data=item, context={'request': request})
-                serializers.append(serializer)
-                if not serializer.is_valid():
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            for serializer in serializers:
-                if serializer.is_valid():
-                    serializer.save()
-            return Response([s.data for s in serializers])
+                if 'id' not in item:
+                    raise exceptions.APIException("Error updating collections. Collection missing collection primary key 'id'. Given: %s" % item)
+
+            item_ids = [item['id'] for item in data['items']]
+            if not (set(item_ids) <= set(collection_ids)):
+                raise exceptions.APIException("Error updating collections. Given collection items MUT be a subset of the course collections.")
+
+            logger.debug("Updating collections: %s" % item_ids)
+            serializer_data = []
+            for item in data['items']:
+                collection_instance = collection_map[item['id']]
+                serializer = CollectionSerializer(collection_instance, data=item, context={'request': request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                serializer_data.append(serializer.data)
+            return Response(serializer_data)
+
+        raise exceptions.APIException("Must specify one of 'items' or 'sort_order' to update a batch of collections for course %s." % course_pk)
 
 
 class CourseImagesListView(GenericAPIView):
