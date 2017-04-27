@@ -77,6 +77,17 @@
   "model": "media_service.collection",
   "pk": 4,
   "fields": {
+    "title": "An amazing collection!",
+    "description": "Too amazing to describe.",
+    "course": 1,
+    "sort_order": 4,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},{
+  "model": "media_service.collection",
+  "pk": 5,
+  "fields": {
     "title": "Testing 1...2..3...",
     "course": 2,
     "sort_order": 1,

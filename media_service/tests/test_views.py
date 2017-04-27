@@ -1,4 +1,5 @@
 import unittest
+import random
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from rest_framework import status
@@ -184,6 +185,42 @@ class TestCourseEndpoint(APITestCase):
         for f in body:
             self.assertEqual(response.data[f], body[f])
             self.assertEqual(getattr(created_collection, f), body[f])
+
+    def test_update_order_of_collections_in_course(self):
+        collections = Collection.objects.filter(course__pk=1).order_by('sort_order')
+        original_order = [c.pk for c in collections]
+        proposed_order = list(reversed(original_order))
+
+        pk = 1
+        url = reverse('course-collections', kwargs={"pk": pk})
+        body = {"sort_order": proposed_order}
+        response = self.client.put(url, body)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        collections_after_update = Collection.objects.filter(course__pk=1).order_by('sort_order')
+        updated_order = [c.pk for c in collections_after_update]
+        self.assertEqual(updated_order, proposed_order)
+
+        def test_invalid_update_sort_order(self):
+            collections = Collection.objects.filter(course__pk=1).order_by('sort_order')
+            actual_order = [c.pk for c in collections]
+            order_missing_one_collection = actual_order[1:]
+            order_with_an_extra_collection = actual_order + [9999]
+
+            pk = 1
+            url = reverse('course-collections', kwargs={"pk": pk})
+            invalid_data = [
+                None, True, False, '1,2,3', {},
+                {"sort_order": None},
+                {"sort_order": '1,2,3'},
+                {"sort_order": []},
+                {"sort_order": order_missing_one_collection},
+                {"sort_order": order_with_an_extra_collection},
+            ]
+
+            for data in invalid_data:
+                response = self.client.put(url, data)
+                self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class TestCollectionEndpoint(APITestCase):
     fixtures = ['test.json']

@@ -225,8 +225,11 @@ Provide an array of items, which are just collection objects:
         data = request.data.copy()
 
         # Shortcut to just update the order of collections
+        print "Data=%s" % data
         if 'sort_order' in data:
-            if not (set(collection_ids) == set(data['sort_order'])):
+            if not isinstance(data['sort_order'], list):
+                raise exceptions.APIException("Error, key 'sort_order' must be a list")
+            elif not (set(collection_ids) == set(data['sort_order'])):
                 mismatch = list(set(collection_ids) - set(data['sort_order']))
                 raise exceptions.APIException("Error updating sort order. Missing or invalid collection IDs. Set mismatch: %s" % mismatch)
             with transaction.atomic():
