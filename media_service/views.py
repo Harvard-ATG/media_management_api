@@ -225,7 +225,6 @@ Provide an array of items, which are just collection objects:
         data = request.data.copy()
 
         # Shortcut to just update the order of collections
-        print "Data=%s" % data
         if 'sort_order' in data:
             if not isinstance(data['sort_order'], list):
                 raise exceptions.APIException("Error, key 'sort_order' must be a list")
