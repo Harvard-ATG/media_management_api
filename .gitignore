@@ -5,6 +5,7 @@ sqlnet.log
 *.pid
 *.pyc
 *.pot
+.idea
 .vagrant
 *.sqlite3
 /pyenv
