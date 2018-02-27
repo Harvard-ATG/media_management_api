@@ -48,7 +48,6 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 if DEBUG:
@@ -107,6 +106,7 @@ FILE_UPLOAD_HANDLERS = [
 
 # Store sessions in default cache defined below
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_COOKIE_NAME = 'media_management_api_sid'
 # NOTE: This setting only affects the session cookie, not the expiration of the session
 # being stored in the cache.  The session keys will expire according to the value of
 # SESSION_COOKIE_AGE (https://docs.djangoproject.com/en/1.8/ref/settings/#session-cookie-age),

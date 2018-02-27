@@ -24,6 +24,7 @@ class CollectionManifestController(object):
             url = data['iiif_base_url']
             width = data['image_width']
             height = data['image_height']
+            image_type = data['image_type']
             images.append({
                 "id": resource.id,
                 "label": resource.title,
@@ -33,7 +34,9 @@ class CollectionManifestController(object):
                 "width": width,
                 "height": height,
                 "url": url,
+                "format": image_type,
             })
+        print images
         return images
 
     def create_manifest(self):
@@ -148,6 +151,7 @@ class IIIFManifest(IIIFObject):
                 can.add_image({
                     'id': img['id'],
                     'url': img['url'],
+                    'format': img.get('format', None),
                     'height': img.get('height', None),
                     'width': img.get('width', None),
                     'is_iiif': img.get('is_iiif', True),
@@ -245,7 +249,7 @@ class IIIFCanvas(IIIFObject):
         self.resource = None
 
     def add_image(self, image):
-        self.resource = IIIFImageResource(self.manifest, self.id, image['url'], image['is_iiif'])
+        self.resource = IIIFImageResource(self.manifest, self.id, image['url'], format=image['format'], is_iiif=image['is_iiif'])
         if image['width'] is not None:
             self.width = image['width']
         if image['height'] is not None:
@@ -290,10 +294,11 @@ class IIIFCanvas(IIIFObject):
         return canvas
 
 class IIIFImageResource(IIIFObject):
-    def __init__(self, manifest, resource_id, image_url, is_iiif=False):
+    def __init__(self, manifest, resource_id, url, format=None, is_iiif=False):
         self.manifest = manifest
         self.id = resource_id
-        self.image_url = image_url
+        self.image_url = url
+        self.image_format = format
         self.is_iiif = is_iiif
 
     def build_url(self):
@@ -318,4 +323,6 @@ class IIIFImageResource(IIIFObject):
                     "profile": "http://iiif.io/api/image/2/level1.json",
                 }
             }
+        if self.image_format:
+            resource['format'] = self.image_format
         return resource
