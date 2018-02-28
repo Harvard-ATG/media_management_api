@@ -318,8 +318,13 @@ class IIIFImageResource(IIIFObject):
                 "@type": "dctypes:Image",
             }
         else:
+            iiif_url_params = dict(base_url=self.image_url, region='full', size='full', rotation=0)
+            max_size = 1024
+            if self.width is not None and self.width > max_size:
+                iiif_url_params['size'] = str(max_size) + ','
+
             resource = {
-                "@id": self.build_url(),
+                "@id": '{base_url}/{region}/{size}/{rotation}/default.jpg'.format(**iiif_url_params),
                 "@type": "dctypes:Image",
                 "service": {
                     "@id": self.image_url,
