@@ -275,3 +275,15 @@ AWS_ACCESS_KEY_ID = SECURE_SETTINGS.get("aws_access_key_id", None)
 AWS_ACCESS_SECRET_KEY = SECURE_SETTINGS.get("aws_access_secret_key", None)
 AWS_S3_BUCKET = SECURE_SETTINGS["aws_s3_bucket"]
 AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
+
+# CORS headers
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_HEADERS = (
+        'x-requested-with',
+        'X-File-Size',
+        'content-type',
+        'accept',
+        'origin',
+        'authorization',
+        'x-csrftoken'
+    )
