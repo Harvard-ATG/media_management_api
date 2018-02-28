@@ -36,7 +36,6 @@ class CollectionManifestController(object):
                 "url": url,
                 "format": image_type,
             })
-        print images
         return images
 
     def create_manifest(self):
@@ -249,7 +248,7 @@ class IIIFCanvas(IIIFObject):
         self.resource = None
 
     def add_image(self, image):
-        self.resource = IIIFImageResource(self.manifest, self.id, image['url'], format=image['format'], is_iiif=image['is_iiif'])
+        self.resource = IIIFImageResource(self.manifest, self.id, image)
         if image['width'] is not None:
             self.width = image['width']
         if image['height'] is not None:
@@ -273,11 +272,13 @@ class IIIFCanvas(IIIFObject):
         })
 
     def to_dict(self):
+        url = self.build_url()
         canvas = {
             "@id": self.build_url(),
             "@type": "sc:Canvas",
             "label": self.label,
             "images": [{
+                "@id": url + "-oa",
                 "@type": "oa:Annotation",
                 "motivation": "sc:painting",
                 "resource": self.resource.to_dict(),
@@ -294,12 +295,14 @@ class IIIFCanvas(IIIFObject):
         return canvas
 
 class IIIFImageResource(IIIFObject):
-    def __init__(self, manifest, resource_id, url, format=None, is_iiif=False):
+    def __init__(self, manifest, resource_id, image):
         self.manifest = manifest
         self.id = resource_id
-        self.image_url = url
-        self.image_format = format
-        self.is_iiif = is_iiif
+        self.image_url = image['url']
+        self.format = image.get('format', None)
+        self.is_iiif = image.get('is_iiif', False)
+        self.width = image.get('width', None)
+        self.height = image.get('height', None)
 
     def build_url(self):
         return self.manifest.build_absolute_uri('iiif:resource', {
@@ -323,6 +326,9 @@ class IIIFImageResource(IIIFObject):
                     "profile": "http://iiif.io/api/image/2/level1.json",
                 }
             }
-        if self.image_format:
-            resource['format'] = self.image_format
+        if self.format:
+            resource['format'] = self.format
+        if self.width and self.height:
+            resource['width'] = self.width
+            resource['height'] = self.height
         return resource
