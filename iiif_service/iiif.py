@@ -40,27 +40,22 @@ class CollectionManifestController(object):
 
     def create_manifest(self):
         images = self.get_images()
-        base_manifest_url = self.request.build_absolute_uri(reverse('collection-manifest', kwargs={'pk':self.collection.pk}))
         manifest_kwargs = {
             "label": self.collection.title,
             "description": self.collection.description,
-            "base_manifest_url": base_manifest_url,
             "images": images,
         }
-        manifest = IIIFManifest(self.collection.pk, **manifest_kwargs)
+        manifest = IIIFManifest(self.request, self.collection.pk, **manifest_kwargs)
         return manifest
 
-    def get_data(self):
+    def get_data(self, object_type, object_id):
         if self.manifest is None:
             self.manifest = self.create_manifest()
-        if 'object_type' in self.request.GET and 'object_id' in self.request.GET:
-            object_type = self.request.GET['object_type']
-            object_id = self.request.GET['object_id']
+        if object_type is not None:
             found_object = self.manifest.find_object(object_type, object_id)
-            if found_object is None:
-                return None
-            else:
+            if found_object is not None:
                 return found_object.to_dict()
+            return None
         return self.manifest.to_dict()
 
 class IIIFObject(object):
@@ -71,7 +66,7 @@ class IIIFObject(object):
 
     See also: http://iiif.io/api/presentation/2.0/
     '''
-    def build_url(self):
+    def url(self):
         '''Returns an absolute URL to the object.'''
         raise Exception("not implemented yet")
 
@@ -128,9 +123,9 @@ class IIIFManifest(IIIFObject):
     output = manifest.to_json()
     print output
     '''
-    def __init__(self, manifest_id, **kwargs):
+    def __init__(self, request, manifest_id, **kwargs):
+        self.request = request
         self.id = manifest_id
-        self.base_manifest_url = kwargs.get('base_manifest_url', '')
         self.label = kwargs.get('label', '')
         self.description = kwargs.get('description', '')
         self.sequences = []
@@ -163,6 +158,8 @@ class IIIFManifest(IIIFObject):
         return sequence
 
     def find_object(self, object_type, object_id):
+        import logging
+        logging.debug("object_type=%s object_id=%s" % (object_type, object_id))
         if object_type == "manifest":
             if object_id == self.id:
                 return self
@@ -170,7 +167,7 @@ class IIIFManifest(IIIFObject):
             for s in self.sequences:
                 if object_id == s.id:
                     return s
-        elif object_type == "canvas":
+        elif object_type in ("canvas", "annotation"):
             for c in self.sequences[0].canvases:
                 if object_id == c.id:
                     return c
@@ -180,24 +177,20 @@ class IIIFManifest(IIIFObject):
                     return c.resource
         return None
 
-    def build_absolute_uri(self, url_name, url_args):
-        url = self.base_manifest_url
-        if url_args is not None:
-            #url_args['object_view'] = url_name # Was using this for URL routing, but not now
-            url = url + '?' + urllib.urlencode(url_args)
-        return url
-
-    def build_url(self):
-        return self.build_absolute_uri('iiif:manifest', {
-            'manifest_id': self.id,
-            'object_type': 'manifest',
-        })
+    def build_absolute_url(self, route, route_args=None):
+        if route_args is None:
+            route_args = {}
+        route_args['manifest_id'] = self.id
+        return self.request.build_absolute_uri(reverse(route, kwargs=route_args))
+        
+    def url(self):
+        return self.build_absolute_url('iiif:manifest')
 
     def to_dict(self):
         manifest = {
             "@context": "http://iiif.io/api/presentation/2/context.json",
             "@type": "sc:Manifest",
-            "@id": self.build_url(),
+            "@id": self.url(),
             "label": self.label,
             "description": self.description,
             "sequences": [sequence.to_dict() for sequence in self.sequences]
@@ -207,7 +200,7 @@ class IIIFManifest(IIIFObject):
 class IIIFSequence(IIIFObject):
     def __init__(self, manifest, sequence_id):
         self.manifest = manifest
-        self.id = sequence_id
+        self.id = str(sequence_id)
         self.canvases = []
 
     def add_canvas(self, canvas_id):
@@ -220,16 +213,15 @@ class IIIFSequence(IIIFObject):
         self.canvases.append(canvas)
         return canvas
 
-    def build_url(self):
-        return self.manifest.build_absolute_uri('iiif:sequence', {
-            'manifest_id': self.manifest.id,
+    def url(self):
+        return self.manifest.build_absolute_url('iiif:sequence', {
             'object_type': 'sequence',
             'object_id': self.id
         })
 
     def to_dict(self):
         sequence = {
-            "@id": self.build_url(),
+            "@id": self.url(),
             "@type": "sc:Sequence",
             "label": "Default order",
             "canvases": [canvas.to_dict() for canvas in self.canvases],
@@ -264,25 +256,26 @@ class IIIFCanvas(IIIFObject):
     def set_metadata(self, metadata):
         self.metadata = metadata
 
-    def build_url(self):
-        return self.manifest.build_absolute_uri('iiif:canvas', {
-            'manifest_id': self.manifest.id,
+    def url(self):
+        return self.manifest.build_absolute_url('iiif:canvas', {
             'object_type': 'canvas',
             'object_id': self.id
         })
 
     def to_dict(self):
-        url = self.build_url()
         canvas = {
-            "@id": self.build_url(),
+            "@id": self.url(),
             "@type": "sc:Canvas",
             "label": self.label,
             "images": [{
-                "@id": url + "-oa",
+                "@id": self.manifest.build_absolute_url('iiif:annotation', {
+                    'object_type': 'annotation',
+                    'object_id': self.id
+                }),
                 "@type": "oa:Annotation",
                 "motivation": "sc:painting",
                 "resource": self.resource.to_dict(),
-                "on": self.build_url(),
+                "on": self.url(),
             }],
         }
         if self.description:
@@ -304,9 +297,8 @@ class IIIFImageResource(IIIFObject):
         self.width = image.get('width', None)
         self.height = image.get('height', None)
 
-    def build_url(self):
-        return self.manifest.build_absolute_uri('iiif:resource', {
-            'manifest_id': self.manifest.id,
+    def url(self):
+        return self.manifest.build_absolute_url('iiif:resource', {
             'object_type': 'resource',
             'object_id': self.id
         })

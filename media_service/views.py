@@ -12,7 +12,6 @@ from rest_framework.exceptions import PermissionDenied
 
 from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
 from media_service.mediastore import MediaStoreUpload, processFileUploads, processRemoteImages
-from media_service.iiif import CollectionManifestController
 from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
 from media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
@@ -86,18 +85,6 @@ be an empty list or a list with one object.
         serializer = CourseSerializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
 
-    @detail_route(methods=['get'])
-    def manifests(self, request, pk=None, format=None):
-        course = self.get_object()
-        manifests = []
-        for collection in course.collections.all():
-            url = reverse('collection-manifest', kwargs={"pk": collection.pk})
-            manifests.append({
-                "label": collection.title,
-                "url": request.build_absolute_uri(url),
-            })
-        return Response(manifests)
-
 
 class CollectionViewSet(viewsets.ModelViewSet):
     '''
@@ -118,7 +105,6 @@ Methods
 - `put /collections/{pk}` Updates collection
 - `delete /collections/{pk}` Deletes a collection
 - `get /collections/{pk}/images`  Lists a collection's images
-- `get /collections/{pk}/manifest` Collection IIIF manifest of images
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
@@ -139,13 +125,6 @@ Methods
         include = ['images']
         serializer = CollectionSerializer(collection, context={'request': request}, include=include)
         return Response(serializer.data)
-
-    @detail_route(methods=['get'])
-    def manifest(self, request, pk=None, format=None):
-        collection = self.get_object()
-        collection_manifest_controller = CollectionManifestController(request, collection)
-        data = collection_manifest_controller.get_data()
-        return Response(data)
 
 class CourseCollectionsView(GenericAPIView):
     '''

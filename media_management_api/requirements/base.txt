@@ -1,16 +1,14 @@
-Django==1.8.4
-# Postgres
+Django==1.11.12
 psycopg2==2.6.1
-# Redis Cache
 redis==2.10.3
-django-redis-cache==1.5.3
+django-redis-cache==1.7.1
 hiredis==0.2.0
-djangorestframework==3.4.7
-markdown==2.6.5
+djangorestframework==3.8.2
+markdown==2.6.11
 mock==1.3.0
-django-filter==0.11.0
-django-cors-headers==0.11
-boto==2.38.0
-pillow==3.4.2
-python-magic==0.4.13
-requests==2.13.0
+django-filter==1.1.0
+django-cors-headers==2.2.0
+boto==2.48.0
+pillow==5.1.0
+python-magic==0.4.15
+requests==2.18.4

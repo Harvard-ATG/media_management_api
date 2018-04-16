@@ -8,5 +8,6 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^api/auth/', include('media_auth.urls', namespace='api-auth')),
     url(r'^api/', include('media_service.urls')),
+    url(r'^iiif/', include('iiif_service.urls', namespace='iiif')),
     url(r'^$', RedirectView.as_view(url='/api/', permanent=False), name='index'),
 ]

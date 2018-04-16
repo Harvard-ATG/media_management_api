@@ -48,6 +48,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'media_management_api.middleware.ExceptionLoggingMiddleware',
 ]
 
 if DEBUG:
@@ -204,40 +205,33 @@ LOGGING = {
     # here is a bit more explicit.  See link for more details:
     # https://docs.python.org/2.7/library/logging.config.html#dictionary-schema-details
     'root': {
-        'level': logging.WARNING,
+        'level': logging.DEBUG,
         'handlers': ['default'],
     },
     'loggers': {
-        # Add app specific loggers here, should look something like this:
-        # '{{ app_name }}': {
-        #    'level': _DEFAULT_LOG_LEVEL,
-        #    'handlers': ['default'],
-        #    'propagate': False,
-        # },
-        # Make sure that propagate is False so that the root logger doesn't get involved
-        # after an app logger handles a log message.
+        # Add app or module specific loggers here.
         'django': {
-            'handlers': ['default', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
         'django.db': {
-            'handlers': ['default', 'console'],
+            'handlers': ['console'],
             'level': 'INFO', # Set to DEBUG to see SQL output
             'propagate': True,
         },
         'media_management_api': {
-            'handlers': ['default', 'console'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
         'media_service': {
-            'handlers': ['default', 'console'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
         'media_auth': {
-            'handlers': ['default', 'console'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },

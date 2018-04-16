@@ -1,7 +1,7 @@
 from django.db import connection
-from django.utils.log import getLogger
+import logging
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class QueryCountDebugMiddleware(object):
     def process_response(self, request, response):
@@ -19,3 +19,7 @@ class QueryCountDebugMiddleware(object):
                 total_time += float(query_time)
             logger.debug('%s queries run, total %s seconds' % (len(connection.queries), total_time))
         return response
+
+class ExceptionLoggingMiddleware(object):
+    def process_exception(self, request, exception):
+        logger.exception('Exception logged for request: %s message: %s' % (request.path, str(exception)))
