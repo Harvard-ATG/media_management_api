@@ -1,6 +1,7 @@
-from django.conf.urls import url
+from django.conf.urls import url, include
 from rest_framework.urlpatterns import format_suffix_patterns
 import views
+import iiif.urls
 
 course_list = views.CourseViewSet.as_view({
     'get': 'list',
@@ -47,6 +48,7 @@ urlpatterns = [
     url(r'^collection-images/(?P<pk>\d+)$', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
     url(r'^images$', image_list, name='image-list'),
     url(r'^images/(?P<pk>\d+)$', image_detail, name='image-detail'),
+    url(r'^iiif/', include(iiif.urls, namespace='iiif')),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
-import media_service.models
+import media_management_api.media_service.models
 
 
 class Migration(migrations.Migration):
@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='resource',
             name='metadata',
-            field=models.TextField(default=media_service.models.metadata_default, blank=True),
+            field=models.TextField(default=media_management_api.media_service.models.metadata_default, blank=True),
         ),
         migrations.AlterField(
             model_name='resource',

@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import django.db.models.deletion
 from django.conf import settings
-import media_service.models
+import media_management_api.media_service.models
 
 
 class Migration(migrations.Migration):
@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'collection',
                 'verbose_name_plural': 'collections',
             },
-            bases=(models.Model, media_service.models.SortOrderModelMixin),
+            bases=(models.Model, media_management_api.media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
             name='CollectionResource',
@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'collection resource',
                 'verbose_name_plural': 'collection resources',
             },
-            bases=(models.Model, media_service.models.SortOrderModelMixin),
+            bases=(models.Model, media_management_api.media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
             name='Course',
@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
                 'verbose_name': 'resource',
                 'verbose_name_plural': 'resources',
             },
-            bases=(models.Model, media_service.models.SortOrderModelMixin),
+            bases=(models.Model, media_management_api.media_service.models.SortOrderModelMixin),
         ),
         migrations.CreateModel(
             name='MediaStore',

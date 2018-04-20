@@ -1,7 +1,8 @@
 import unittest
+from django.core.urlresolvers import reverse
 from django.test import TestCase, RequestFactory
-from media_service.models import Course, Collection
-from media_service.iiif import CollectionManifestController, IIIFManifest
+from media_management_api.media_service.models import Course, Collection
+from media_management_api.media_iiif.helpers import CollectionManifestController, IIIFManifest
 
 class TestCollectionManifestController(TestCase):
     fixtures = ['test.json']
@@ -27,8 +28,8 @@ class IIIFManifestTest(unittest.TestCase):
     def setUp(self):
         self.factory = RequestFactory()
 
-    def create_manifest(self, manifest_id, **kwargs):
-        return IIIFManifest(manifest_id, **kwargs)
+    def create_manifest(self, request, manifest_id, **kwargs):
+        return IIIFManifest(request, manifest_id, **kwargs)
 
     def get_images_list(self):
         images = [
@@ -61,7 +62,9 @@ class IIIFManifestTest(unittest.TestCase):
 
     def test_create_manifest_with_images(self):
         images = self.get_images_list()
-        manifest = self.create_manifest(1, images=self.get_images_list())
+        manifest_id = 1
+        request = self.factory.get(reverse('api:iiif:manifest', kwargs={'manifest_id': manifest_id}))
+        manifest = self.create_manifest(request, manifest_id, images=self.get_images_list())
         md = manifest.to_dict()
         iiif_images = [img for img in images if img['is_iiif'] is True]
 
@@ -74,13 +77,14 @@ class IIIFManifestTest(unittest.TestCase):
         label = 'test label'
         description = 'test description'
         manifest_id = 1
-        manifest = self.create_manifest(manifest_id, label=label, description=description)
+        request = self.factory.get(reverse('api:iiif:manifest', kwargs={'manifest_id': manifest_id}))
+        manifest = self.create_manifest(request, manifest_id, label=label, description=description)
         md = manifest.to_dict()
 
         expected_attr = {
             "@context": "http://iiif.io/api/presentation/2/context.json",
             "@type": "sc:Manifest",
-            "@id": '?manifest_id=%s&object_type=manifest' % manifest_id,
+            "@id": request.build_absolute_uri(reverse('api:iiif:manifest', kwargs={'manifest_id':manifest_id})),
             "label": label,
             "description": description,
             "sequences": []
@@ -104,7 +108,8 @@ class IIIFManifestTest(unittest.TestCase):
 
         # generate manifest from the images
         manifest_id = 1
-        manifest_obj = self.create_manifest(manifest_id, images=images)
+        request = self.factory.get(reverse('api:iiif:manifest', kwargs={'manifest_id': manifest_id}))
+        manifest_obj = self.create_manifest(request, manifest_id, images=images)
         manifest_dict = manifest_obj.to_dict()
 
         # search for duplicate canvas IDs

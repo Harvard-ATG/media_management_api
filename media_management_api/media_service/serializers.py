@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
-from media_service.models import MediaStore, Course, Collection, CollectionResource, Resource
-from media_service import mediastore
+from .models import Course, Collection, CollectionResource, Resource
+from . import mediastore
 import json
 
 def resource_to_representation(resource):
@@ -14,13 +14,14 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'id', 'username', 'email', 'groups')
 
 class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="api:collectionimages-detail", lookup_field="pk")
     collection_id = serializers.PrimaryKeyRelatedField(queryset=Collection.objects.all())
-    collection_url = serializers.HyperlinkedIdentityField(view_name="collection-detail", lookup_field="pk")
+    collection_url = serializers.HyperlinkedRelatedField(view_name="api:collection-detail", lookup_field="collection_id", lookup_url_kwarg="pk", read_only=True)
     course_image_id = serializers.PrimaryKeyRelatedField(queryset=Resource.objects.all(), source='resource_id')
 
     class Meta:
         model = CollectionResource
-        fields = ('id', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
+        fields = ('id', 'url', 'collection_url', 'collection_id', 'course_image_id', 'sort_order', 'created', 'updated')
 
     def __init__(self, *args, **kwargs):
         super(CollectionResourceSerializer, self).__init__(*args, **kwargs)
@@ -38,7 +39,7 @@ class CollectionResourceSerializer(serializers.HyperlinkedModelSerializer):
         resource = instance.resource
         data.update({
             "type": 'collectionimages',
-            "url": reverse('collectionimages-detail', kwargs={'pk': instance.pk}, request=self.context['request']),
+            "url": reverse('api:collectionimages-detail', kwargs={'pk': instance.pk}, request=self.context['request']),
             "course_image_id": resource.id,
             "title": resource.title,
             "description": resource.description,
@@ -64,14 +65,28 @@ class CollectionResourceIdsField(serializers.Field):
         return obj
 
 class CollectionSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="api:collection-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
-    images_url = serializers.HyperlinkedIdentityField(view_name="collectionimages-list", lookup_field="pk")
+    images_url = serializers.HyperlinkedIdentityField(view_name="api:collectionimages-list", lookup_field="pk")
     description = serializers.CharField(max_length=None, required=False, allow_blank=True)
     course_image_ids = CollectionResourceIdsField(read_only=False, required=False)
+    custom_iiif_manifest_url = serializers.CharField(max_length=4096, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
-        fields = ('url', 'id', 'title', 'description', 'sort_order', 'course_id', 'course_image_ids', 'images_url', 'created', 'updated')
+        fields = (
+            'url',
+            'id',
+            'title',
+            'description',
+            'sort_order',
+            'course_id',
+            'course_image_ids',
+            'images_url',
+            'custom_iiif_manifest_url',
+            'created',
+            'updated',
+        )
 
     def __init__(self, *args, **kwargs):
         include = kwargs.pop('include', [])
@@ -84,6 +99,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             title=validated_data['title'],
             course=validated_data['course_id'],
             description=validated_data.get('description', ''),
+            custom_iiif_manifest_url=validated_data.get('custom_iiif_manifest_url', '')
         )
         collection.save()
         if 'course_image_ids' in validated_data:
@@ -103,6 +119,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             instance.description = validated_data['description']
         if 'sort_order' in validated_data:
             instance.sort_order = validated_data['sort_order']
+        if 'custom_iiif_manifest_url' in validated_data:
+            instance.custom_iiif_manifest_url = validated_data['custom_iiif_manifest_url']
         if 'course_image_ids' in validated_data:
             course_image_ids = validated_data['course_image_ids']
             CollectionResource.objects.filter(collection__pk=instance.pk).delete()
@@ -113,7 +131,9 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
 
     def to_representation(self, instance):
         data = super(CollectionSerializer, self).to_representation(instance)
+        request = self.context['request']
         data['type'] = 'collections'
+        data['default_iiif_manifest_url'] = request.build_absolute_uri(reverse('api:iiif:manifest', kwargs={'manifest_id': instance.pk}))
         return data
 
 def metadata_validator(value):
@@ -140,7 +160,7 @@ def metadata_validator(value):
                 raise serializers.ValidationError("Metadata pair '%s' invalid. Label and value must be strings, not composite types." % pair)
 
 class ResourceSerializer(serializers.HyperlinkedModelSerializer):
-    url = serializers.HyperlinkedIdentityField(view_name="image-detail", lookup_field="pk")
+    url = serializers.HyperlinkedIdentityField(view_name="api:image-detail", lookup_field="pk")
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
     description = serializers.CharField(max_length=None, required=False, allow_blank=True)
     metadata = serializers.JSONField(binary=False, required=False, allow_null=True, validators=[metadata_validator])
@@ -221,8 +241,9 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         return data
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
-    collections_url = serializers.HyperlinkedIdentityField(view_name="course-collections", lookup_field="pk")
-    images_url = serializers.HyperlinkedIdentityField(view_name="course-images", lookup_field="pk")
+    url = serializers.HyperlinkedIdentityField(view_name="api:course-detail", lookup_field="pk")
+    collections_url = serializers.HyperlinkedIdentityField(view_name="api:course-collections", lookup_field="pk")
+    images_url = serializers.HyperlinkedIdentityField(view_name="api:course-images", lookup_field="pk")
 
     class Meta:
         model = Course

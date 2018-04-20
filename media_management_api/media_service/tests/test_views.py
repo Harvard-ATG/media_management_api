@@ -4,7 +4,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
-from media_service.models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
+from ..models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
 
 class TestCourseEndpoint(APITestCase):
     fixtures = ['test.json']
@@ -57,6 +57,7 @@ class TestCourseEndpoint(APITestCase):
                 "collections": [
                     {
                         "url": "http://localhost:8000/collections/1",
+                        "iiif_manifest_url": "http://localhost:8000/iiif/manifest/1",
                         "id": 1,
                         "title": "Example Collection",
                         "description": "",
@@ -74,7 +75,7 @@ class TestCourseEndpoint(APITestCase):
 
     def test_course_list(self):
         courses = Course.objects.all()
-        url = reverse('course-list')
+        url = reverse('api:course-list')
         self.client.login(username=self.credentials['username'], password=self.credentials['password'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -90,7 +91,7 @@ class TestCourseEndpoint(APITestCase):
     def test_course_detail(self):
         pk = 1
         course = Course.objects.get(pk=pk)
-        url = reverse('course-detail', kwargs={"pk": pk})
+        url = reverse('api:course-detail', kwargs={"pk": pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -114,7 +115,7 @@ class TestCourseEndpoint(APITestCase):
                 self.assertEqual(item_keys, expected_image_keys)
 
     def test_create_course(self):
-        url = reverse('course-list')
+        url = reverse('api:course-list')
         body = {
             "title": "Test Course",
             "lti_context_id": "e4d7f1b4ed2e42d15898f4b27b019da4",
@@ -135,14 +136,14 @@ class TestCourseEndpoint(APITestCase):
 
     def test_delete_course(self):
         pk = 1
-        url = reverse('course-detail', kwargs={"pk":pk})
+        url = reverse('api:course-detail', kwargs={"pk":pk})
         response = self.client.delete(url)
         self.assertTrue(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Course.objects.filter(pk=pk).exists())
 
     def test_update_course(self):
         pk = 1
-        url = reverse('course-detail', kwargs={"pk": pk})
+        url = reverse('api:course-detail', kwargs={"pk": pk})
         body = {
             "title": "Title Updated(!)",
             "lti_context_id": "updated_context_id",
@@ -167,7 +168,7 @@ class TestCourseEndpoint(APITestCase):
 
     def test_add_collection_to_course(self):
         pk = 1
-        url = reverse('course-collections', kwargs={"pk": pk})
+        url = reverse('api:course-collections', kwargs={"pk": pk})
         body = {
             "title": "Test Collection",
             "description": "Some description",
@@ -192,7 +193,7 @@ class TestCourseEndpoint(APITestCase):
         proposed_order = list(reversed(original_order))
 
         pk = 1
-        url = reverse('course-collections', kwargs={"pk": pk})
+        url = reverse('api:course-collections', kwargs={"pk": pk})
         body = {"sort_order": proposed_order}
         response = self.client.put(url, body)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -208,7 +209,7 @@ class TestCourseEndpoint(APITestCase):
             order_with_an_extra_collection = actual_order + [9999]
 
             pk = 1
-            url = reverse('course-collections', kwargs={"pk": pk})
+            url = reverse('api:course-collections', kwargs={"pk": pk})
             invalid_data = [
                 None, True, False, '1,2,3', {},
                 {"sort_order": None},
@@ -233,7 +234,7 @@ class TestCollectionEndpoint(APITestCase):
 
     def test_collection_list(self):
         collections = Collection.objects.all()
-        url = reverse('collection-list')
+        url = reverse('api:collection-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(collections))
@@ -241,6 +242,7 @@ class TestCollectionEndpoint(APITestCase):
         # Example of what we would expect
         example_item = {
             "url": "http://localhost:8000/collections/1",
+            "iiif_manifest_url": "http://localhost:8000/manifests/1",
             "id": 1,
             "title": "Scrambled Eggs Super!",
             "description": "",
@@ -260,13 +262,14 @@ class TestCollectionEndpoint(APITestCase):
     def test_collection_detail(self):
         pk = 1
         course = Collection.objects.get(pk=pk)
-        url = reverse('collection-detail', kwargs={"pk": pk})
+        url = reverse('api:collection-detail', kwargs={"pk": pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Get an example response item
         example_item = {
             "url": "http://localhost:8000/collections/1",
+            "iiif_manifest_url": "http://localhost:8000/manifests/1",
             "id": 1,
             "title": "Scrambled Eggs Super!",
             "description": "",
@@ -284,7 +287,7 @@ class TestCollectionEndpoint(APITestCase):
         self.assertEqual(actual_keys, expected_keys)
 
     def test_create_collection(self):
-        url = reverse('collection-list')
+        url = reverse('api:collection-list')
         body = {
             "title": "Test Collection",
             "description": "Some description",
@@ -305,14 +308,14 @@ class TestCollectionEndpoint(APITestCase):
 
     def test_delete_collection(self):
         pk = 1
-        url = reverse('collection-detail', kwargs={"pk":pk})
+        url = reverse('api:collection-detail', kwargs={"pk":pk})
         response = self.client.delete(url)
         self.assertTrue(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Collection.objects.filter(pk=pk).exists())
 
     def test_update_collection(self):
         pk = 1
-        url = reverse('collection-detail', kwargs={"pk": pk})
+        url = reverse('api:collection-detail', kwargs={"pk": pk})
         collection = Collection.objects.get(pk=pk)
         body = {
             "title": "Thidwick The Big-Hearted Moose",

@@ -7,9 +7,9 @@ import mock
 import requests
 from mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
-from media_service import mediastore
-from media_service.mediastore import MediaStoreUpload, MediaStoreException
-from media_service.models import MediaStore
+from .. import mediastore
+from ..mediastore import MediaStoreUpload, MediaStoreException
+from ..models import MediaStore
 
 TEST_FILES = {
     'test.png': {
@@ -222,7 +222,7 @@ class TestUrlImport(unittest.TestCase):
             return temp_image_file
         return mock_fetch
 
-    @patch('media_service.mediastore.fetchRemoteImage')
+    @patch('media_management_api.media_service.mediastore.fetchRemoteImage')
     def testProcessRemoteImages(self, mock_fetch):
         mock_fetch.return_value = self.mockFetchRemoteImage()
         request_data = {

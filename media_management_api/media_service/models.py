@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Max
+from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 import urllib
 import json
@@ -47,17 +48,18 @@ class MediaStore(BaseModel):
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.file_name)
 
-    def get_iiif_identifier(self, encode=False):
+    def _get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
         if encode:
             identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
         return identifier
 
     def get_iiif_base_url(self):
-        identifier = self.get_iiif_identifier(encode=True)
+        identifier = self._get_iiif_identifier(encode=True)
         return '{base_url}{identifier}'.format(base_url=IIIF_IMAGE_SERVER_URL, identifier=identifier)
 
-    def get_iiif_full_url(self, desired_format="jpg", thumb=False):
+    def get_iiif_full_url(self, thumb=False):
+        format = "jpg",
         w, h = (self.img_width, self.img_height)
         size = "full"
         if thumb:
@@ -65,12 +67,12 @@ class MediaStore(BaseModel):
             size = "{thumb_w},{thumb_h}".format(thumb_w=w, thumb_h=h)
 
         url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(encode=True),
+            "identifier": self._get_iiif_identifier(encode=True),
             "region": "full",
             "size": size,
             "rotation": 0,
             "quality": "default",
-            "format": desired_format,
+            "format": format,
         })
         return {"width": w, "height": h, "url": url}
 
@@ -232,6 +234,7 @@ class Collection(BaseModel, SortOrderModelMixin):
     description = models.TextField(blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='collections')
     sort_order = models.IntegerField(default=0)
+    custom_iiif_manifest_url = models.CharField(max_length=4096, null=False, blank=True)
 
     class Meta:
         verbose_name = 'collection'

@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 import unittest
 import json
-from media_service.models import MediaStore, Collection, Course, Resource, metadata_default
+from ..models import MediaStore, Collection, Course, Resource, metadata_default
 
 class TestMediaStore(unittest.TestCase):
     test_items = [
