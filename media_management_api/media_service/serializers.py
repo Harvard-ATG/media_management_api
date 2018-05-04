@@ -71,6 +71,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     description = serializers.CharField(max_length=None, required=False, allow_blank=True)
     course_image_ids = CollectionResourceIdsField(read_only=False, required=False)
     custom_iiif_manifest_url = serializers.CharField(max_length=4096, required=False, allow_blank=True)
+    custom_iiif_canvas_id = serializers.CharField(max_length=4096, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -84,6 +85,7 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             'course_image_ids',
             'images_url',
             'custom_iiif_manifest_url',
+            'custom_iiif_canvas_id',
             'created',
             'updated',
         )
@@ -99,7 +101,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             title=validated_data['title'],
             course=validated_data['course_id'],
             description=validated_data.get('description', ''),
-            custom_iiif_manifest_url=validated_data.get('custom_iiif_manifest_url', '')
+            custom_iiif_manifest_url=validated_data.get('custom_iiif_manifest_url', ''),
+            custom_iiif_canvas_id=validated_data.get('custom_iiif_canvas_id', '')
         )
         collection.save()
         if 'course_image_ids' in validated_data:
@@ -121,6 +124,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             instance.sort_order = validated_data['sort_order']
         if 'custom_iiif_manifest_url' in validated_data:
             instance.custom_iiif_manifest_url = validated_data['custom_iiif_manifest_url']
+        if 'custom_iiif_canvas_id' in validated_data:
+            instance.custom_iiif_canvas_id = validated_data['custom_iiif_canvas_id']
         if 'course_image_ids' in validated_data:
             course_image_ids = validated_data['course_image_ids']
             CollectionResource.objects.filter(collection__pk=instance.pk).delete()

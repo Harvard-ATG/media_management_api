@@ -59,7 +59,6 @@ class MediaStore(BaseModel):
         return '{base_url}{identifier}'.format(base_url=IIIF_IMAGE_SERVER_URL, identifier=identifier)
 
     def get_iiif_full_url(self, thumb=False):
-        format = "jpg",
         w, h = (self.img_width, self.img_height)
         size = "full"
         if thumb:
@@ -72,7 +71,7 @@ class MediaStore(BaseModel):
             "size": size,
             "rotation": 0,
             "quality": "default",
-            "format": format,
+            "format": "jpg",
         })
         return {"width": w, "height": h, "url": url}
 
@@ -228,13 +227,13 @@ class Resource(BaseModel, SortOrderModelMixin):
         images = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
         return images
 
-
 class Collection(BaseModel, SortOrderModelMixin):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='collections')
     sort_order = models.IntegerField(default=0)
     custom_iiif_manifest_url = models.CharField(max_length=4096, null=False, blank=True)
+    custom_iiif_canvas_id = models.CharField(max_length=4096, null=False, blank=True)
 
     class Meta:
         verbose_name = 'collection'
@@ -276,3 +275,4 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
     def get_collection_images(cls, collection_pk):
         images = cls.objects.filter(collection__pk=collection_pk).order_by('sort_order')
         return images
+
