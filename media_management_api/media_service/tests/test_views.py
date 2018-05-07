@@ -57,7 +57,9 @@ class TestCourseEndpoint(APITestCase):
                 "collections": [
                     {
                         "url": "http://localhost:8000/collections/1",
-                        "iiif_manifest_url": "http://localhost:8000/iiif/manifest/1",
+                        "default_iiif_manifest_url": "http://localhost:8000/iiif/manifest/1",
+                        "custom_iiif_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+                        "custom_iiif_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
                         "id": 1,
                         "title": "Example Collection",
                         "description": "",
@@ -242,7 +244,9 @@ class TestCollectionEndpoint(APITestCase):
         # Example of what we would expect
         example_item = {
             "url": "http://localhost:8000/collections/1",
-            "iiif_manifest_url": "http://localhost:8000/manifests/1",
+            "default_iiif_manifest_url": "http://localhost:8000/manifests/1",
+            "custom_iiif_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+            "custom_iiif_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
             "id": 1,
             "title": "Scrambled Eggs Super!",
             "description": "",
@@ -269,7 +273,9 @@ class TestCollectionEndpoint(APITestCase):
         # Get an example response item
         example_item = {
             "url": "http://localhost:8000/collections/1",
-            "iiif_manifest_url": "http://localhost:8000/manifests/1",
+            "default_iiif_manifest_url": "http://localhost:8000/manifests/1",
+            "custom_iiif_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+            "custom_iiif_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
             "id": 1,
             "title": "Scrambled Eggs Super!",
             "description": "",

@@ -1,28 +1,32 @@
 import unittest
 from django.core.urlresolvers import reverse
 from django.test import TestCase, RequestFactory
-from media_management_api.media_service.models import Course, Collection
-from media_management_api.media_iiif.helpers import CollectionManifestController, IIIFManifest
 
-class TestCollectionManifestController(TestCase):
+from media_management_api.media_service.models import Course, Collection
+from media_management_api.media_service.iiif.views import IiifManifestView
+from media_management_api.media_service.iiif.objects import IIIFManifest
+
+import json
+
+class IiifManifestViewTest(TestCase):
     fixtures = ['test.json']
     def setUp(self):
         self.factory = RequestFactory()
 
-    def test_create_collection_manifest(self):
+    def test_manifest(self):
         pk = 1
         collection = Collection.objects.get(pk=pk)
         self.assertEqual(collection.pk, pk)
 
-        request = self.factory.get('/')
-        collection_manifest_controller = CollectionManifestController(request, collection)
-        data = collection_manifest_controller.get_data()
-        self.assertTrue(data)
+        request = self.factory.get(reverse('api:iiif:manifest', kwargs={'manifest_id': collection.pk}))
+        request.content_type = 'application/json'
+        manifest_view = IiifManifestView.as_view()
+        response = manifest_view(request, manifest_id=collection.pk)
+        self.assertTrue(response.data)
 
         expected_attrs = ["@context", "@type", "@id", "label", "description", "sequences"]
-        self.assertEqual(sorted(data.keys()), sorted(expected_attrs))
-        self.assertEqual(data['@context'], "http://iiif.io/api/presentation/2/context.json")
-        self.assertEqual(data['@type'], "sc:Manifest")
+        self.assertEqual(response.data['@context'], "http://iiif.io/api/presentation/2/context.json")
+        self.assertEqual(response.data['@type'], "sc:Manifest")
 
 class IIIFManifestTest(unittest.TestCase):
     def setUp(self):
