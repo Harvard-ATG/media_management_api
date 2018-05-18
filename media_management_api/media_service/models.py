@@ -228,12 +228,19 @@ class Resource(BaseModel, SortOrderModelMixin):
         return images
 
 class Collection(BaseModel, SortOrderModelMixin):
+    IIIF_SOURCE_IMAGES = 'images'
+    IIIF_SOURCE_CUSTOM = 'custom'
+    IIIF_SOURCE_CHOICES = (
+        (IIIF_SOURCE_IMAGES, 'Collection Images'),
+        (IIIF_SOURCE_CUSTOM, 'IIIF Manifest'),
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='collections')
     sort_order = models.IntegerField(default=0)
-    custom_iiif_manifest_url = models.CharField(max_length=4096, null=False, blank=True)
-    custom_iiif_canvas_id = models.CharField(max_length=4096, null=False, blank=True)
+    iiif_source = models.CharField(max_length=100, choices=IIIF_SOURCE_CHOICES, default=IIIF_SOURCE_IMAGES)
+    iiif_custom_manifest_url = models.CharField(max_length=4096, null=False, blank=True)
+    iiif_custom_canvas_id = models.CharField(max_length=4096, null=False, blank=True)
 
     class Meta:
         verbose_name = 'collection'

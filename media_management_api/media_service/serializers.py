@@ -70,8 +70,8 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
     images_url = serializers.HyperlinkedIdentityField(view_name="api:collectionimages-list", lookup_field="pk")
     description = serializers.CharField(max_length=None, required=False, allow_blank=True)
     course_image_ids = CollectionResourceIdsField(read_only=False, required=False)
-    custom_iiif_manifest_url = serializers.CharField(max_length=4096, required=False, allow_blank=True)
-    custom_iiif_canvas_id = serializers.CharField(max_length=4096, required=False, allow_blank=True)
+    iiif_custom_manifest_url = serializers.CharField(max_length=4096, required=False, allow_blank=True)
+    iiif_custom_canvas_id = serializers.CharField(max_length=4096, required=False, allow_blank=True)
 
     class Meta:
         model = Collection
@@ -84,8 +84,9 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             'course_id',
             'course_image_ids',
             'images_url',
-            'custom_iiif_manifest_url',
-            'custom_iiif_canvas_id',
+            'iiif_source',
+            'iiif_custom_manifest_url',
+            'iiif_custom_canvas_id',
             'created',
             'updated',
         )
@@ -101,8 +102,9 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             title=validated_data['title'],
             course=validated_data['course_id'],
             description=validated_data.get('description', ''),
-            custom_iiif_manifest_url=validated_data.get('custom_iiif_manifest_url', ''),
-            custom_iiif_canvas_id=validated_data.get('custom_iiif_canvas_id', '')
+            iiif_source=validated_data.get('iiif_source', Collection.IIIF_SOURCE_IMAGES),
+            iiif_custom_manifest_url=validated_data.get('iiif_custom_manifest_url', ''),
+            iiif_custom_canvas_id=validated_data.get('iiif_custom_canvas_id', '')
         )
         collection.save()
         if 'course_image_ids' in validated_data:
@@ -122,10 +124,12 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
             instance.description = validated_data['description']
         if 'sort_order' in validated_data:
             instance.sort_order = validated_data['sort_order']
-        if 'custom_iiif_manifest_url' in validated_data:
-            instance.custom_iiif_manifest_url = validated_data['custom_iiif_manifest_url']
-        if 'custom_iiif_canvas_id' in validated_data:
-            instance.custom_iiif_canvas_id = validated_data['custom_iiif_canvas_id']
+        if 'iiif_source' in validated_data:
+            instance.iiif_source = validated_data['iiif_source']
+        if 'iiif_custom_manifest_url' in validated_data:
+            instance.iiif_custom_manifest_url = validated_data['iiif_custom_manifest_url']
+        if 'iiif_custom_canvas_id' in validated_data:
+            instance.iiif_custom_canvas_id = validated_data['iiif_custom_canvas_id']
         if 'course_image_ids' in validated_data:
             course_image_ids = validated_data['course_image_ids']
             CollectionResource.objects.filter(collection__pk=instance.pk).delete()
@@ -138,8 +142,21 @@ class CollectionSerializer(serializers.HyperlinkedModelSerializer):
         data = super(CollectionSerializer, self).to_representation(instance)
         request = self.context['request']
         data['type'] = 'collections'
-        data['default_iiif_manifest_url'] = request.build_absolute_uri(reverse('api:iiif:manifest', kwargs={'manifest_id': instance.pk}))
+        data['iiif_images_manifest_url'] = self._getImagesManifest(request, instance)
+        data['iiif_images_canvas_id'] = "" # not implemented yet, but here for consistency
+        data['iiif_manifest'] = {}
+        if instance.iiif_source == 'images':
+            data['iiif_manifest']['url']       = data['iiif_images_manifest_url']
+            data['iiif_manifest']['canvas_id'] = data['iiif_images_canvas_id']
+            data['iiif_manifest']['source']    = instance.iiif_source
+        elif instance.iiif_source == 'custom':
+            data['iiif_manifest']['url']       = data['iiif_custom_manifest_url']
+            data['iiif_manifest']['canvas_id'] = data['iiif_custom_canvas_id']
+            data['iiif_manifest']['source']    = instance.iiif_source
         return data
+
+    def _getImagesManifest(self, request, instance):
+        return request.build_absolute_uri(reverse('api:iiif:manifest', kwargs={'manifest_id': instance.pk}))
 
 def metadata_validator(value):
     '''
