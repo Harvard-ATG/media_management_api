@@ -4,19 +4,16 @@ from rest_framework import viewsets, status, exceptions
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
-from rest_framework.decorators import detail_route, list_route, api_view
 from rest_framework.reverse import reverse
-from rest_framework.parsers import JSONParser, FormParser, MultiPartParser, FileUploadParser
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 
-from media_service.models import Course, Collection, Resource, MediaStore, CollectionResource
-from media_service.mediastore import MediaStoreUpload, processFileUploads, processRemoteImages
-from media_service.iiif import CollectionManifestController
-from media_service.serializers import UserSerializer, CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
+from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
+from media_management_api.media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
-from media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
-from media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
+from .models import Course, Collection, Resource, MediaStore, CollectionResource
+from .mediastore import processFileUploads, processRemoteImages
+from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
 import logging
 
@@ -25,9 +22,10 @@ logger = logging.getLogger(__name__)
 class APIRoot(APIView):
     def get(self, request, format=None):
         return Response({
-            'courses': reverse('course-list', request=request, format=format),
-            'collections': reverse('collection-list', request=request, format=format),
-            'images': reverse('image-list', request=request, format=format),
+            'courses': reverse('api:course-list', request=request, format=format),
+            'collections': reverse('api:collection-list', request=request, format=format),
+            'images': reverse('api:image-list', request=request, format=format),
+            'iiif': reverse('api:iiif:root', request=request, format=format),
         })
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -77,26 +75,14 @@ be an empty list or a list with one object.
         if len(lti_filters.keys()) > 0:
             queryset = queryset.filter(**lti_filters)
 
-        serializer = CourseSerializer(queryset, many=True, context={'request': request})
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
         course = self.get_object()
         include = ['images', 'collections']
-        serializer = CourseSerializer(course, context={'request': request}, include=include)
+        serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
-
-    @detail_route(methods=['get'])
-    def manifests(self, request, pk=None, format=None):
-        course = self.get_object()
-        manifests = []
-        for collection in course.collections.all():
-            url = reverse('collection-manifest', kwargs={"pk": collection.pk})
-            manifests.append({
-                "label": collection.title,
-                "url": request.build_absolute_uri(url),
-            })
-        return Response(manifests)
 
 
 class CollectionViewSet(viewsets.ModelViewSet):
@@ -118,7 +104,6 @@ Methods
 - `put /collections/{pk}` Updates collection
 - `delete /collections/{pk}` Deletes a collection
 - `get /collections/{pk}/images`  Lists a collection's images
-- `get /collections/{pk}/manifest` Collection IIIF manifest of images
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
@@ -131,21 +116,14 @@ Methods
 
     def list(self, request, format=None):
         collections = self.get_queryset()
-        serializer = CollectionSerializer(collections, many=True, context={'request': request})
+        serializer = self.get_serializer(collections, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
         collection = self.get_object()
         include = ['images']
-        serializer = CollectionSerializer(collection, context={'request': request}, include=include)
+        serializer = self.get_serializer(collection, context={'request': request}, include=include)
         return Response(serializer.data)
-
-    @detail_route(methods=['get'])
-    def manifest(self, request, pk=None, format=None):
-        collection = self.get_object()
-        collection_manifest_controller = CollectionManifestController(request, collection)
-        data = collection_manifest_controller.get_data()
-        return Response(data)
 
 class CourseCollectionsView(GenericAPIView):
     '''
@@ -203,7 +181,7 @@ Provide an array of items, which are just collection objects:
         course_pk = pk
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         include = ['images']
-        serializer = CollectionSerializer(collections, many=True, context={'request': request}, include=include)
+        serializer = self.get_serializer(collections, many=True, context={'request': request}, include=include)
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
@@ -211,7 +189,7 @@ Provide an array of items, which are just collection objects:
         data = request.data.copy()
         course = get_object_or_404(Course, pk=pk)
         data['course_id'] = course.pk
-        serializer = CollectionSerializer(data=data, context={'request': request})
+        serializer = self.get_serializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -253,7 +231,7 @@ Provide an array of items, which are just collection objects:
             serializer_data = []
             for item in data['items']:
                 collection_instance = collection_map[item['id']]
-                serializer = CollectionSerializer(collection_instance, data=item, context={'request': request})
+                serializer = self.get_serializer(collection_instance, data=item, context={'request': request})
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
                 serializer_data.append(serializer.data)
@@ -286,7 +264,7 @@ Methods
     def get(self, request, pk=None, format=None):
         course_pk = pk
         images = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
-        serializer = ResourceSerializer(images, many=True, context={'request': request})
+        serializer = self.get_serializer(images, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
@@ -310,7 +288,7 @@ Methods
             for index, f in processed_uploads.iteritems():
                 data = request_data.copy()
                 logger.debug("Processing file upload: %s" % f.name)
-                serializer = ResourceSerializer(data=data, context={'request': request}, is_upload=True, file_object=f)
+                serializer = self.get_serializer(data=data, context={'request': request}, is_upload=True, file_object=f)
                 serializers.append(serializer)
 
         # Handle import of images by URL, provided in a JSON message
@@ -333,7 +311,7 @@ Methods
                 data = item['data'].copy()
                 data['course_id'] = course.pk
                 logger.debug("Processing image url=%s file=%s data=%s" % (url, f.name, data))
-                serializer = ResourceSerializer(data=data, context={'request': request}, is_upload=False, file_object=f, file_url=url)
+                serializer = self.get_serializer(data=data, context={'request': request}, is_upload=False, file_object=f, file_url=url)
                 serializers.append(serializer)
         else:
             raise exceptions.APIException("Error: content type '%s' not supported" % request.content_type)
@@ -369,7 +347,7 @@ Methods
 
     def get(self, request, pk=None, format=None):
         collection_resources = self.get_queryset().filter(collection__pk=pk).order_by('sort_order')
-        serializer = CollectionResourceSerializer(collection_resources, many=True, context={'request': request})
+        serializer = self.get_serializer(collection_resources, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
@@ -379,7 +357,7 @@ Methods
             collection_resource = collection_resource.copy()
             collection_resource['collection_id'] = collection.pk
             data.append(collection_resource)
-        serializer = CollectionResourceSerializer(data=data, many=True, context={'request': request})
+        serializer = self.get_serializer(data=data, many=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -406,7 +384,7 @@ Methods
 
     def get(self, request, pk=None, format=None):
          collection_resource = self.get_object()
-         serializer = CollectionResourceSerializer(collection_resource, context={'request': request})
+         serializer = self.get_serializer(collection_resource, context={'request': request})
          return Response(serializer.data)
 
     def delete(self, request, pk=None, format=None):

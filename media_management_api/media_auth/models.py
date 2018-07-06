@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import signals
-from media_service.models import UserProfile
+from media_management_api.media_service.models import UserProfile
 
 import os
 import base64

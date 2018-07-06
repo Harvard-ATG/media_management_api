@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Max
+from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 import urllib
 import json
@@ -47,17 +48,17 @@ class MediaStore(BaseModel):
     def __unicode__(self):
         return "{0}:{1}".format(self.id, self.file_name)
 
-    def get_iiif_identifier(self, encode=False):
+    def _get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
         if encode:
             identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
         return identifier
 
     def get_iiif_base_url(self):
-        identifier = self.get_iiif_identifier(encode=True)
+        identifier = self._get_iiif_identifier(encode=True)
         return '{base_url}{identifier}'.format(base_url=IIIF_IMAGE_SERVER_URL, identifier=identifier)
 
-    def get_iiif_full_url(self, desired_format="jpg", thumb=False):
+    def get_iiif_full_url(self, thumb=False):
         w, h = (self.img_width, self.img_height)
         size = "full"
         if thumb:
@@ -65,12 +66,12 @@ class MediaStore(BaseModel):
             size = "{thumb_w},{thumb_h}".format(thumb_w=w, thumb_h=h)
 
         url = MediaStore.make_iiif_image_server_url({
-            "identifier": self.get_iiif_identifier(encode=True),
+            "identifier": self._get_iiif_identifier(encode=True),
             "region": "full",
             "size": size,
             "rotation": 0,
             "quality": "default",
-            "format": desired_format,
+            "format": "jpg",
         })
         return {"width": w, "height": h, "url": url}
 
@@ -226,12 +227,20 @@ class Resource(BaseModel, SortOrderModelMixin):
         images = cls.objects.filter(course__pk=course_pk).order_by('sort_order')
         return images
 
-
 class Collection(BaseModel, SortOrderModelMixin):
+    IIIF_SOURCE_IMAGES = 'images'
+    IIIF_SOURCE_CUSTOM = 'custom'
+    IIIF_SOURCE_CHOICES = (
+        (IIIF_SOURCE_IMAGES, 'Collection Images'),
+        (IIIF_SOURCE_CUSTOM, 'IIIF Manifest'),
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='collections')
     sort_order = models.IntegerField(default=0)
+    iiif_source = models.CharField(max_length=100, choices=IIIF_SOURCE_CHOICES, default=IIIF_SOURCE_IMAGES)
+    iiif_custom_manifest_url = models.CharField(max_length=4096, null=False, blank=True)
+    iiif_custom_canvas_id = models.CharField(max_length=4096, null=False, blank=True)
 
     class Meta:
         verbose_name = 'collection'
@@ -273,3 +282,4 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
     def get_collection_images(cls, collection_pk):
         images = cls.objects.filter(collection__pk=collection_pk).order_by('sort_order')
         return images
+

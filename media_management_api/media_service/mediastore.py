@@ -1,11 +1,9 @@
 import io
 import os
 import hashlib
-import tempfile
 import magic
 import logging
 import zipfile
-import re
 import requests
 import tempfile
 import urlparse
@@ -19,7 +17,7 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 from PIL import Image
 
-from media_service.models import MediaStore
+from .models import MediaStore
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils import timezone
-from media_service.models import UserProfile
+from media_management_api.media_service.models import UserProfile
 from .models import Application, Token
 from .exceptions import InvalidApplicationError, InvalidTokenError, InvalidScopeError
 
