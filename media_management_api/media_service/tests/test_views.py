@@ -57,9 +57,6 @@ class TestCourseEndpoint(APITestCase):
                 "collections": [
                     {
                         "url": "http://localhost:8000/collections/1",
-                        "default_iiif_manifest_url": "http://localhost:8000/iiif/manifest/1",
-                        "custom_iiif_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
-                        "custom_iiif_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
                         "id": 1,
                         "title": "Example Collection",
                         "description": "",
@@ -67,6 +64,16 @@ class TestCourseEndpoint(APITestCase):
                         "course_id": 1,
                         "course_image_ids": [1],
                         "images_url": "http://localhost:8000/collections/1/images",
+                        "iiif_source": "custom",
+                        "iiif_images_manifest_url": "http://localhost:8000/iiif/manifest/1",
+                        "iiif_images_canvas_id": "",
+                        "iiif_custom_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+                        "iiif_custom_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
+                        "iiif_manifest": {
+                            "url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+                            "source": "custom",
+                            "canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805"
+                        },
                         "created": "2015-12-15T15:42:33.443434Z",
                         "updated": "2015-12-15T15:42:33.443434Z",
                         "type": "collections"
@@ -244,9 +251,6 @@ class TestCollectionEndpoint(APITestCase):
         # Example of what we would expect
         example_item = {
             "url": "http://localhost:8000/collections/1",
-            "default_iiif_manifest_url": "http://localhost:8000/manifests/1",
-            "custom_iiif_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
-            "custom_iiif_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
             "id": 1,
             "title": "Scrambled Eggs Super!",
             "description": "",
@@ -254,6 +258,16 @@ class TestCollectionEndpoint(APITestCase):
             "course_id": 1,
             "course_image_ids": [1,4],
             "images_url": "http://localhost:8000/collections/1/images",
+            "iiif_source": "custom",
+            "iiif_images_manifest_url": "http://localhost:8000/iiif/manifest/1",
+            "iiif_images_canvas_id": "",
+            "iiif_custom_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+            "iiif_custom_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
+            "iiif_manifest": {
+                "url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+                "source": "custom",
+                "canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805"
+            },
             "created": "2015-12-15T15:42:33.443434Z",
             "updated": "2016-01-06T21:13:08.353908Z",
             "type": "collections"
@@ -273,9 +287,6 @@ class TestCollectionEndpoint(APITestCase):
         # Get an example response item
         example_item = {
             "url": "http://localhost:8000/collections/1",
-            "default_iiif_manifest_url": "http://localhost:8000/manifests/1",
-            "custom_iiif_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
-            "custom_iiif_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
             "id": 1,
             "title": "Scrambled Eggs Super!",
             "description": "",
@@ -284,6 +295,16 @@ class TestCollectionEndpoint(APITestCase):
             "course_image_ids": [1,4],
             "images": [],
             "images_url": "http://localhost:8000/collections/1/images",
+            "iiif_source": "custom",
+            "iiif_images_manifest_url": "http://localhost:8000/iiif/manifest/1",
+            "iiif_images_canvas_id": "",
+            "iiif_custom_manifest_url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+            "iiif_custom_canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805",
+            "iiif_manifest": {
+                "url": "https://iiif.harvardartmuseums.org/manifests/object/226092",
+                "source": "custom",
+                "canvas_id": "https://iiif.harvardartmuseums.org/manifests/object/226092/annotation/anno-43183805"
+            },
             "created": "2015-12-15T15:42:33.443434Z",
             "updated": "2016-01-06T21:13:08.353908Z",
             "type": "collections"
