@@ -6,8 +6,9 @@
 
 ```sh
 $ cp media_management_api/settings/secure.py.example media_management_api/settings/secure.py
-$ vagrant up
-$ vagrant ssh
-$ python manage.py runserver 0.0.0.0:8000
+$ docker-compose up
+$ docker-compose exec web python manage.py migrate
+$ docker-compose exec web python manage.py createsuperuser
+$ open http://localhost:8000
 ```
 
