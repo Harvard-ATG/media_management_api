@@ -4,13 +4,17 @@
 
 ### Quickstart
 
-Setup environment settings:
+**Prerequisites:**
+
+Ensure that [docker](https://www.docker.com/) is installed.
+
+**Configure django:**
 
 ```
 $ cp media_management_api/settings/secure.py.example media_management_api/settings/secure.py
 ```
 
-Start the docker containers and run initial setup tasks:
+**Start docker services:**
 
 ```
 $ docker-compose up
@@ -19,9 +23,8 @@ $ docker-compose exec web python manage.py createsuperuser
 $ open http://localhost:8000
 ```
 
-To access the postgres database directly:
+**Other tasks:**
 
-```
-docker-compose exec db psql -U media_management_api
-```
+- Access postgres database: `docker-compose exec db psql -U media_management_api`
+- Run unit tests: `docker-compose exec web python manage.py test`
 
