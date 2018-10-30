@@ -70,8 +70,10 @@ def fetchRemoteImage(url):
         'Accept': "{image_types},image/*;q=0.8".format(image_types=', '.join(VALID_IMAGE_TYPES)),
     }
 
-    # Use HTTP for all requests because of SSL errors
-    url = "http://" + url[8:] if url.startswith("https://") else url
+    # Check to see if the URL is available using a HEAD request
+    res = requests.head(url, headers=request_headers)
+    if res.status_code == 404 and url.startswith("https://"):
+        url = "http://" + url[8:]
 
     with contextlib.closing(requests.get(url, headers=request_headers, stream=True, verify=False)) as res:
         logger.debug("Fetched remote image. Request url=%s headers=%s Response code=%s headers=%s" % (url, request_headers, res.status_code, res.headers))

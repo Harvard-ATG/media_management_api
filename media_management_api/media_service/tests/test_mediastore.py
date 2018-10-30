@@ -247,6 +247,8 @@ class TestUrlImport(unittest.TestCase):
             else:
                 self.assertEqual(processed[url]["data"]["description"], "")
 
+
+
 class TestZipUpload(unittest.TestCase):
 
     test_files = TEST_FILES
