@@ -4,6 +4,7 @@ from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 import urllib
 import json
+import datetime
 
 # Required settings
 IIIF_IMAGE_SERVER_URL = settings.IIIF_IMAGE_SERVER_URL
@@ -127,6 +128,42 @@ class Course(BaseModel):
         ordering = ["title"]
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
+    def copy_to(self, course_pk):
+        dest_course = self.objects.get(pk=course_pk)
+        resource_copy = {}
+        collection_copy = {}
+        collection_resource_copy = {}
+
+        copy_status = CopyStatus(model='Course', src_pk=self.pk, dest_pk=dest_course.pk)
+        copy_status.initiate()
+
+        # Copy resources
+        for resource in self.resources:
+            from_pk, to_pk = resource.copy_to(dest_course)
+            resource_copy[from_pk] = to_pk
+
+        # Copy collections
+        for collection in self.collections:
+            from_pk, to_pk = collection.copy_to(dest_course)
+            collection_copy[from_pk] = to_pk
+
+        # Copy resource-collection mappings
+        for collection in self.collections:
+            for collection_resource in collection.resources:
+                dest_collection_pk = collection_copy[collection.pk]
+                dest_resource_pk = resource_copy[resource.pk]
+                from_pk, to_pk = collection_resource.copy_to(dest_collection_pk, dest_resource_pk)
+                collection_resource_copy[from_pk] = to_pk
+
+        data = {
+            "resources": resource_copy,
+            "collections": collection_copy,
+            "collection_resources": collection_resource_copy,
+        }
+        copy_status.complete(data)
+
+        return data
+
     def __unicode__(self):
         return u'{0}:{1}:{2}'.format(self.id, self.lti_context_id, self.title)
 
@@ -179,6 +216,13 @@ class Resource(BaseModel, SortOrderModelMixin):
             self.media_store.reference_count -= 1
             self.media_store.save()
         super(Resource, self).delete(*args, **kwargs)
+
+    def copy_to(self, course_pk):
+        from_pk = self.pk
+        self.course = course_pk
+        to_pk = self.pk
+        assert(from_pk != to_pk, "copy should create a new resource instance")
+        return from_pk, to_pk
 
     def get_representation(self):
         if self.media_store is None:
@@ -252,6 +296,13 @@ class Collection(BaseModel, SortOrderModelMixin):
             self.sort_order = self.next_sort_order({"course__pk": self.course.pk})
         super(Collection, self).save(*args, **kwargs)
 
+    def copy_to(self, course_pk):
+        from_pk = self.pk
+        self.course = course_pk
+        to_pk = self.pk
+        assert(from_pk != to_pk, "copy should create a new collection instance")
+        return from_pk, to_pk
+
     def __unicode__(self):
         return u'%s:%s' % (self.id, self.title)
 
@@ -275,6 +326,15 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
             self.sort_order = self.next_sort_order({"collection__pk": self.collection.pk})
         super(CollectionResource, self).save(*args, **kwargs)
 
+    def copy_to(self, collection_pk, resource_pk):
+        from_pk = self.pk
+        self.collection = collection_pk
+        self.resource = resource_pk
+        self.save()
+        to_pk = self.pk
+        assert (from_pk != to_pk, "copy should create a new collection resource instance")
+        return from_pk, to_pk
+
     def __unicode__(self):
         return u'{0}'.format(self.id)
 
@@ -283,3 +343,43 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
         images = cls.objects.filter(collection__pk=collection_pk).order_by('sort_order')
         return images
 
+class CopyStatus(BaseModel):
+    STATE_INITIATED = 'initiated'
+    STATE_COMPLETED = 'completed'
+    STATE_ERROR = 'error'
+    STATE_CHOICES = (
+        (STATE_INITIATED, 'Initiated'),
+        (STATE_COMPLETED, 'Completed'),
+        (STATE_ERROR, 'Error'),
+    )
+    model = models.CharField(max_length=255)
+    src_pk = models.CharField(max_length=255)
+    dest_pk = models.CharField(max_length=255)
+    state = models.CharField(max_length=100, choices=STATE_CHOICES, default=STATE_INITIATED)
+    data = models.JSONField()
+    message = models.CharField(max_length=4096)
+
+    def _get_message_for_state(self):
+        choice_map = dict(self.STATE_CHOICES)
+        fmt_args = dict(msg=choice_map[self.state], model=self.model, src_pk=self.src_pk, dest_pk=self.dest_pk)
+        return "Copy {msg}: {type} {src_pk} to {dest_pk}".format(**fmt_args)
+
+    def initiate(self):
+        self.state = self.STATE_INITATED
+        self.message = self._get_message_for_state()
+        self.save()
+        return self
+
+    def complete(self, data=None):
+        self.state = self.STATE_COMPLETED
+        self.message = self._get_message_for_state()
+        if data is not None:
+            self.data = data
+        self.save()
+        return self
+
+    def fail(self, error_msg):
+        self.state = self.STATE_ERROR
+        self.message = error_msg
+        self.save()
+        return self

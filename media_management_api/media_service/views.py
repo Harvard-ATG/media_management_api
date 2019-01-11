@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
 from media_management_api.media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
-from .models import Course, Collection, Resource, MediaStore, CollectionResource
+from .models import Course, Collection, Resource, MediaStore, CollectionResource, CopyStatus
 from .mediastore import processFileUploads, processRemoteImages
 from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
 
@@ -84,6 +84,48 @@ be an empty list or a list with one object.
         serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
 
+class CourseCopyView(APIView):
+    '''
+Copies the collections from one course to another.
+
+Permissions:
+- Must have read permission on the "from" course and write permission on the "to" course.
+Must be administrator and/or teaching staff in "from" course and the "to" course.
+
+A GET request will return the status of the copy
+A PUT request initiates a copy. Thishould not create duplicate copies -- just one (e.g. idempotent)
+
+    '''
+    def _get_copy_status(self, src_pk, dest_pk=None):
+        copy_status = CopyStatus.objects.filter(model="Course", src_pk=src_pk)
+        if dest_pk is not None:
+            copy_status.filter(dest_pk=dest_pk)
+        return copy_status
+
+    def get(self, request, pk, format=None):
+        # Return all copy statuses for this course
+        copy_statuses = self._get_copy_status(pk)
+        results = []
+        for item in copy_statuses:
+            results.append({
+                "state": item.state,
+                "started": item.created,
+                "updated": item.updated,
+                "message": item.message,
+                "data": item.data
+            })
+        return Response(results)
+
+    def put(self, request, pk, format=None):
+        # For now, let's assume that permissions are satisfied and that we can perform the copy.
+        result = {"message": "Copy successful"}
+        dest_pk = request.data['dest_course_pk']
+        copy_status = self._get_copy_status(pk, dest_pk)
+        if not copy_status.exists():
+            course = Course.objects.get(pk=pk)
+            data = course.copy_to(dest_pk)
+            result["data"] = data
+        return Response(result)
 
 class CollectionViewSet(viewsets.ModelViewSet):
     '''
