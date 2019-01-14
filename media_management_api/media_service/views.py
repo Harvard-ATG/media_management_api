@@ -87,10 +87,10 @@ be an empty list or a list with one object.
 
 class CourseClonesView(APIView):
     '''
-Endpoint used to request a copy or clone of a course and record data about the clone operation.
+Endpoint for copying or cloning course resources.
 
-Cloning a course will copy the target course's collections, resources, and collection resources. In other words,
-it performs a deep copy.
+This will perform a deep copy of another course's collections and resources. Useful for courses that want to
+reuse content from previous instances.
 
 **Permissions:**
 
@@ -98,16 +98,18 @@ You must have admin access in both courses in order to perform the copy.
 
 **Endpoints:**
 
-- `GET /courses/<pk>/clones` List courses that have been cloned
-- `POST /courses/<pk>/clones` Requests a clone of a course
+- `GET /courses/<pk>/clones` List copies that have been initiated
+- `POST /courses/<pk>/clones` Request a copy of another course
 
-To submit a clone request, you must provide the ID of the course you wish to clone in the body of the request:
-`{clone_course_id: "<pk>"}`.
+You must specify `{source_id: "<pk>"}` when submitting a POST request to identify the course to be copied. The
+destination of the copy is already given in the URL endpoint.
     '''
     def get(self, request, pk, format=None):
         clone_qs = Clone.objects.filter(model="Course", dest_pk=pk)
-        if 'src_pk' in request.GET:
-            clone_qs.filter(src_pk=request.GET['src_pk'])
+        if 'source_id' in request.GET:
+            clone_qs = clone_qs.filter(src_pk=request.GET['source_id'])
+        if 'state' in request.GET:
+            clone_qs = clone_qs.filter(state=request.GET['state'])
         serializer = CloneSerializer(clone_qs, many=True)
         return Response(serializer.data)
 
@@ -117,9 +119,9 @@ To submit a clone request, you must provide the ID of the course you wish to clo
         The assumption is that a course should only be cloned once into the target.
         '''
         dest_pk = pk
-        if 'clone_course_id' not in request.data:
-            raise exceptions.ValidationError("Must provide 'clone_course_id' to identify the course to clone.", 400)
-        src_pk = str(request.data['clone_course_id'])
+        if 'source_id' not in request.data:
+            raise exceptions.ValidationError("Must provide 'source_id' to identify the course to clone.", 400)
+        src_pk = str(request.data['source_id'])
         if src_pk == pk:
             raise exceptions.ValidationError("Cannot clone self", 400)
         status = 200
