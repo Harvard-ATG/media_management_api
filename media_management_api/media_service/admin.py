@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
+from .models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile, Clone
 
 class CollectionsInline(admin.StackedInline):
     extra = 0
@@ -42,11 +42,11 @@ class CollectionAdmin(admin.ModelAdmin):
 class ResourceAdmin(admin.ModelAdmin):
     list_display = ('id', 'course', 'owner', 'media_store', 'title')
     search_fields = ('title', 'description')
-    
+
     def get_queryset(self, request):
         qs = super(ResourceAdmin, self).get_queryset(request)
         return qs.select_related('media_store', 'course', 'owner')
-    
+
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'sis_user_id')
     search_fields = ('sis_user_id', )
@@ -55,9 +55,15 @@ class UserProfileAdmin(admin.ModelAdmin):
         qs = super(UserProfileAdmin, self).get_queryset(request)
         return qs.select_related('user')
 
+class CloneAdmin(admin.ModelAdmin):
+    model = Clone
+    list_display = ('id', 'model', 'src_pk', 'dest_pk', 'state', 'created')
+    search_fields = ('src_pk', 'dest_pk')
+
 admin.site.register(MediaStore, MediaStoreAdmin)
 admin.site.register(Course, CourseAdmin)
 admin.site.register(Collection, CollectionAdmin)
 admin.site.register(Resource, ResourceAdmin)
 admin.site.register(CollectionResource)
 admin.site.register(UserProfile, UserProfileAdmin)
+admin.site.register(Clone, CloneAdmin)

@@ -37,6 +37,7 @@ Courses Endpoints
 
 - `/courses`  Lists courses
 - `/courses/{pk}` Course detail
+- `/courses/{pk}/clones` Lists a course's clone records (e.g. if resources were copied from another course)
 - `/courses/{pk}/collections` Lists a course's collections
 - `/courses/{pk}/images`  Lists a course's images
 
@@ -135,7 +136,7 @@ To submit a clone request, you must provide the ID of the course you wish to clo
                 result["message"] = "Clone error"
                 status = 500
             else:
-                result["message"] = "Unknown clone state"
+                result["message"] = "Clone state unknown"
                 status = 500
         else:
             try:

@@ -1,5 +1,6 @@
-from django.db import models, Error
+from django.db import models, transaction, Error
 from django.db.models import Max
+
 from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 import urllib
@@ -143,33 +144,33 @@ class Course(BaseModel):
 
         logger.info("Clone %d started from course %s to %s" % (clone.pk, self.pk, course_pk))
         try:
-            # Copy collections from the course
-            for collection in self.collections.all():
-                logger.info("Cloning collection %s [clone_id=%s]" % (collection.pk, clone.pk))
-                from_pk, to_pk = collection.copy_to(dest_course)
-                clone_data["collections"][from_pk] = to_pk
-                clone_data["total"] += 1
-
-            # Copy resources from the course
-            for resource in self.resources.all():
-                logger.info("Cloning resource %s [clone_id=%s]" % (resource.pk, clone.pk))
-                from_pk, to_pk = resource.copy_to(dest_course)
-                clone_data["resources"][from_pk] = to_pk
-                clone_data["total"] += 1
-
-            # Copy mapping of the resources and collections from the course
-            for collection in self.collections.all():
-                for collection_resource in collection.resources.all():
-                    logger.info("Cloning collection resource %s [clone_id=%s]" % (collection_resource.pk, clone.pk))
-                    dest_collection_pk = clone_data["collections"][collection_resource.collection_id]
-                    dest_resource_pk = clone_data["resources"][collection_resource.resource_id]
-                    from_pk, to_pk = collection_resource.copy_to(dest_collection_pk, dest_resource_pk)
-                    clone_data["collection_resources"][from_pk] = to_pk
+            with transaction.atomic():
+                # Copy collections from the course
+                for collection in self.collections.all():
+                    logger.info("Cloning collection %s [clone_id=%s]" % (collection.pk, clone.pk))
+                    from_pk, to_pk = collection.copy_to(dest_course)
+                    clone_data["collections"][from_pk] = to_pk
                     clone_data["total"] += 1
+
+                # Copy resources from the course
+                for resource in self.resources.all():
+                    logger.info("Cloning resource %s [clone_id=%s]" % (resource.pk, clone.pk))
+                    from_pk, to_pk = resource.copy_to(dest_course)
+                    clone_data["resources"][from_pk] = to_pk
+                    clone_data["total"] += 1
+
+                # Copy mapping of the resources and collections from the course
+                for collection in self.collections.all():
+                    for collection_resource in collection.resources.all():
+                        logger.info("Cloning collection resource %s [clone_id=%s]" % (collection_resource.pk, clone.pk))
+                        dest_collection_pk = clone_data["collections"][collection_resource.collection_id]
+                        dest_resource_pk = clone_data["resources"][collection_resource.resource_id]
+                        from_pk, to_pk = collection_resource.copy_to(dest_collection_pk, dest_resource_pk)
+                        clone_data["collection_resources"][from_pk] = to_pk
+                        clone_data["total"] += 1
         except Error as e:
             logger.exception("Clone error from course %s to %s" % (clone.src_pk, clone.dest_pk))
             clone.fail(str(e))
-            clone.saveData(clone_data)
             raise e
 
         clone.complete(clone_data)
