@@ -225,16 +225,6 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'media_service': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'media_auth': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
     },
 }
 

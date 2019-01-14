@@ -32,7 +32,7 @@ def obtain_token(data):
     required_data = ('client_id', 'client_secret', 'user_id', 'scope')
     if not all([k in data for k in required_data]):
         raise InvalidApplicationError("Missing required data. Must include: %s" % ", ".join(required_data))
-    
+
     # Validate the application
     application = None
     if is_valid_application(client_id=data['client_id'], client_secret=data['client_secret'], raise_exception=True):
@@ -105,7 +105,7 @@ def is_token_expired(token, raise_exception=False):
             token = Token.objects.get(key=token)
         except Token.DoesNotExist:
             if raise_exception:
-                raise InvalidTokenError("No such token: %s" % access_token)
+                raise InvalidTokenError("Invalid token")
             return True
 
     now = timezone.now()

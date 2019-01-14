@@ -1,10 +1,12 @@
-from django.db import models
+from django.db import models, Error
 from django.db.models import Max
 from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 import urllib
 import json
-import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Required settings
 IIIF_IMAGE_SERVER_URL = settings.IIIF_IMAGE_SERVER_URL
@@ -129,40 +131,51 @@ class Course(BaseModel):
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
     def copy_to(self, course_pk):
-        dest_course = self.objects.get(pk=course_pk)
-        resource_copy = {}
-        collection_copy = {}
-        collection_resource_copy = {}
-
-        copy_status = CopyStatus(model='Course', src_pk=self.pk, dest_pk=dest_course.pk)
-        copy_status.initiate()
-
-        # Copy resources
-        for resource in self.resources:
-            from_pk, to_pk = resource.copy_to(dest_course)
-            resource_copy[from_pk] = to_pk
-
-        # Copy collections
-        for collection in self.collections:
-            from_pk, to_pk = collection.copy_to(dest_course)
-            collection_copy[from_pk] = to_pk
-
-        # Copy resource-collection mappings
-        for collection in self.collections:
-            for collection_resource in collection.resources:
-                dest_collection_pk = collection_copy[collection.pk]
-                dest_resource_pk = resource_copy[resource.pk]
-                from_pk, to_pk = collection_resource.copy_to(dest_collection_pk, dest_resource_pk)
-                collection_resource_copy[from_pk] = to_pk
-
-        data = {
-            "resources": resource_copy,
-            "collections": collection_copy,
-            "collection_resources": collection_resource_copy,
+        clone_data = {
+            "total": 0,
+            "resources": {},
+            "collections": {},
+            "collection_resources": {},
         }
-        copy_status.complete(data)
+        dest_course = Course.objects.get(pk=course_pk)
+        clone = Clone(model='Course', src_pk=self.pk, dest_pk=dest_course.pk)
+        clone.initiate()
 
-        return data
+        logger.info("Clone %d started from course %s to %s" % (clone.pk, self.pk, course_pk))
+        try:
+            # Copy collections from the course
+            for collection in self.collections.all():
+                logger.info("Cloning collection %s [clone_id=%s]" % (collection.pk, clone.pk))
+                from_pk, to_pk = collection.copy_to(dest_course)
+                clone_data["collections"][from_pk] = to_pk
+                clone_data["total"] += 1
+
+            # Copy resources from the course
+            for resource in self.resources.all():
+                logger.info("Cloning resource %s [clone_id=%s]" % (resource.pk, clone.pk))
+                from_pk, to_pk = resource.copy_to(dest_course)
+                clone_data["resources"][from_pk] = to_pk
+                clone_data["total"] += 1
+
+            # Copy mapping of the resources and collections from the course
+            for collection in self.collections.all():
+                for collection_resource in collection.resources.all():
+                    logger.info("Cloning collection resource %s [clone_id=%s]" % (collection_resource.pk, clone.pk))
+                    dest_collection_pk = clone_data["collections"][collection_resource.collection_id]
+                    dest_resource_pk = clone_data["resources"][collection_resource.resource_id]
+                    from_pk, to_pk = collection_resource.copy_to(dest_collection_pk, dest_resource_pk)
+                    clone_data["collection_resources"][from_pk] = to_pk
+                    clone_data["total"] += 1
+        except Error as e:
+            logger.exception("Clone error from course %s to %s" % (clone.src_pk, clone.dest_pk))
+            clone.fail(str(e))
+            clone.saveData(clone_data)
+            raise e
+
+        clone.complete(clone_data)
+        logger.info("Clone %d completed from course %s to %s" % (clone.pk, clone.src_pk, clone.dest_pk))
+
+        return clone
 
     def __unicode__(self):
         return u'{0}:{1}:{2}'.format(self.id, self.lti_context_id, self.title)
@@ -219,9 +232,12 @@ class Resource(BaseModel, SortOrderModelMixin):
 
     def copy_to(self, course_pk):
         from_pk = self.pk
+        self.pk = None
         self.course = course_pk
+        self.sort_order = None
+        self.save(force_insert=True)
         to_pk = self.pk
-        assert(from_pk != to_pk, "copy should create a new resource instance")
+        assert from_pk != to_pk, "copy should create a new resource instance"
         return from_pk, to_pk
 
     def get_representation(self):
@@ -298,9 +314,12 @@ class Collection(BaseModel, SortOrderModelMixin):
 
     def copy_to(self, course_pk):
         from_pk = self.pk
+        self.pk = None
         self.course = course_pk
+        self.sort_order = None
+        self.save(force_insert=True)
         to_pk = self.pk
-        assert(from_pk != to_pk, "copy should create a new collection instance")
+        assert from_pk != to_pk, "copy should create a new collection instance"
         return from_pk, to_pk
 
     def __unicode__(self):
@@ -328,11 +347,13 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
 
     def copy_to(self, collection_pk, resource_pk):
         from_pk = self.pk
-        self.collection = collection_pk
-        self.resource = resource_pk
-        self.save()
+        self.pk = None
+        self.collection_id = collection_pk
+        self.resource_id = resource_pk
+        self.sort_order = None
+        self.save(force_insert=True)
         to_pk = self.pk
-        assert (from_pk != to_pk, "copy should create a new collection resource instance")
+        assert from_pk != to_pk, "copy should create a new collection resource instance"
         return from_pk, to_pk
 
     def __unicode__(self):
@@ -343,7 +364,7 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
         images = cls.objects.filter(collection__pk=collection_pk).order_by('sort_order')
         return images
 
-class CopyStatus(BaseModel):
+class Clone(BaseModel):
     STATE_INITIATED = 'initiated'
     STATE_COMPLETED = 'completed'
     STATE_ERROR = 'error'
@@ -356,23 +377,23 @@ class CopyStatus(BaseModel):
     src_pk = models.CharField(max_length=255)
     dest_pk = models.CharField(max_length=255)
     state = models.CharField(max_length=100, choices=STATE_CHOICES, default=STATE_INITIATED)
-    data = models.JSONField()
-    message = models.CharField(max_length=4096)
+    error = models.TextField()
+    data = JSONField(default='{}')
 
-    def _get_message_for_state(self):
-        choice_map = dict(self.STATE_CHOICES)
-        fmt_args = dict(msg=choice_map[self.state], model=self.model, src_pk=self.src_pk, dest_pk=self.dest_pk)
-        return "Copy {msg}: {type} {src_pk} to {dest_pk}".format(**fmt_args)
+    class Meta:
+        verbose_name = 'clone'
+        verbose_name_plural = 'clones'
+        ordering = ['-created']
 
-    def initiate(self):
-        self.state = self.STATE_INITATED
-        self.message = self._get_message_for_state()
+    def initiate(self, data=None):
+        self.state = self.STATE_INITIATED
+        if data is not None:
+            self.data = data
         self.save()
         return self
 
     def complete(self, data=None):
         self.state = self.STATE_COMPLETED
-        self.message = self._get_message_for_state()
         if data is not None:
             self.data = data
         self.save()
@@ -380,6 +401,11 @@ class CopyStatus(BaseModel):
 
     def fail(self, error_msg):
         self.state = self.STATE_ERROR
-        self.message = error_msg
+        self.error = error_msg
         self.save()
+        return self
+
+    def saveData(self, data):
+        self.data = data
+        self.save(update_fields=['data', 'updated'])
         return self

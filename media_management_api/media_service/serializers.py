@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
-from .models import Course, Collection, CollectionResource, Resource
+from .models import Course, Collection, CollectionResource, Resource, Clone
 from . import mediastore
 import json
 
@@ -284,3 +284,9 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
         data = super(CourseSerializer, self).to_representation(instance)
         data['type'] = 'courses'
         return data
+
+class CloneSerializer(serializers.ModelSerializer):
+    data = serializers.JSONField()
+    class Meta:
+        model = Clone
+        fields = ('id', 'model', 'src_pk', 'dest_pk', 'state', 'error', 'data', 'created', 'updated')

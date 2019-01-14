@@ -11,9 +11,9 @@ from rest_framework.permissions import IsAuthenticated
 from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
 from media_management_api.media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
-from .models import Course, Collection, Resource, MediaStore, CollectionResource, CopyStatus
+from .models import Course, Collection, Resource, MediaStore, CollectionResource, Clone
 from .mediastore import processFileUploads, processRemoteImages
-from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
+from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CloneSerializer
 
 import logging
 
@@ -84,48 +84,71 @@ be an empty list or a list with one object.
         serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
 
-class CourseCopyView(APIView):
+class CourseClonesView(APIView):
     '''
-Copies the collections from one course to another.
+Endpoint used to request a copy or clone of a course and record data about the clone operation.
 
-Permissions:
-- Must have read permission on the "from" course and write permission on the "to" course.
-Must be administrator and/or teaching staff in "from" course and the "to" course.
+Cloning a course will copy the target course's collections, resources, and collection resources. In other words,
+it performs a deep copy.
 
-A GET request will return the status of the copy
-A PUT request initiates a copy. Thishould not create duplicate copies -- just one (e.g. idempotent)
+**Permissions:**
 
+You must have admin access in both courses in order to perform the copy.
+
+**Endpoints:**
+
+- `GET /courses/<pk>/clones` List courses that have been cloned
+- `POST /courses/<pk>/clones` Requests a clone of a course
+
+To submit a clone request, you must provide the ID of the course you wish to clone in the body of the request:
+`{clone_course_id: "<pk>"}`.
     '''
-    def _get_copy_status(self, src_pk, dest_pk=None):
-        copy_status = CopyStatus.objects.filter(model="Course", src_pk=src_pk)
-        if dest_pk is not None:
-            copy_status.filter(dest_pk=dest_pk)
-        return copy_status
-
     def get(self, request, pk, format=None):
-        # Return all copy statuses for this course
-        copy_statuses = self._get_copy_status(pk)
-        results = []
-        for item in copy_statuses:
-            results.append({
-                "state": item.state,
-                "started": item.created,
-                "updated": item.updated,
-                "message": item.message,
-                "data": item.data
-            })
-        return Response(results)
+        clone_qs = Clone.objects.filter(model="Course", dest_pk=pk)
+        if 'src_pk' in request.GET:
+            clone_qs.filter(src_pk=request.GET['src_pk'])
+        serializer = CloneSerializer(clone_qs, many=True)
+        return Response(serializer.data)
 
-    def put(self, request, pk, format=None):
-        # For now, let's assume that permissions are satisfied and that we can perform the copy.
-        result = {"message": "Copy successful"}
-        dest_pk = request.data['dest_course_pk']
-        copy_status = self._get_copy_status(pk, dest_pk)
-        if not copy_status.exists():
-            course = Course.objects.get(pk=pk)
-            data = course.copy_to(dest_pk)
-            result["data"] = data
-        return Response(result)
+    def post(self, request, pk, format=None):
+        '''
+        Initiates a clone if one does not already exist for the src/dest combination.
+        The assumption is that a course should only be cloned once into the target.
+        '''
+        dest_pk = pk
+        if 'clone_course_id' not in request.data:
+            raise exceptions.ValidationError("Must provide 'clone_course_id' to identify the course to clone.", 400)
+        src_pk = str(request.data['clone_course_id'])
+        if src_pk == pk:
+            raise exceptions.ValidationError("Cannot clone self", 400)
+        status = 200
+        result = {}
+        clone_qs = Clone.objects.filter(model="Course", dest_pk=dest_pk, src_pk=src_pk)
+        if clone_qs.exists():
+            clone = clone_qs[0]
+            result["data"] = CloneSerializer(clone).data
+            if clone.state == Clone.STATE_INITIATED:
+                result["message"] = "Clone already initiated"
+            elif clone.state == Clone.STATE_COMPLETED:
+                result["message"] = "Clone already completed"
+            elif clone.state == Clone.STATE_ERROR:
+                result["message"] = "Clone error"
+                status = 500
+            else:
+                result["message"] = "Unknown clone state"
+                status = 500
+        else:
+            try:
+                course = Course.objects.get(pk=src_pk)
+                clone = course.copy_to(dest_pk)
+                result["message"] = "Clone successful"
+                result["data"] = CloneSerializer(clone).data
+            except Course.DoesNotExist:
+                result["message"] = "Clone error"
+                result["error"] = "Course %s not found" % src_pk
+                status = 404
+        return Response(result, status=status)
+
 
 class CollectionViewSet(viewsets.ModelViewSet):
     '''
