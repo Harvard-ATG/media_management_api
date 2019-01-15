@@ -131,7 +131,7 @@ class Course(BaseModel):
         ordering = ["title"]
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
-    def copy_to(self, course_pk):
+    def clone(self, course_pk):
         clone_data = {
             "total": 0,
             "resources": {},

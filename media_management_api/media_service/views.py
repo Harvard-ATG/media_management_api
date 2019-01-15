@@ -87,22 +87,24 @@ be an empty list or a list with one object.
 
 class CourseClonesView(APIView):
     '''
-Endpoint for copying or cloning course resources.
+A **course clones** resource is for initiating and maintaining information about copying/cloning course resources.
 
-This will perform a deep copy of another course's collections and resources. Useful for courses that want to
-reuse content from previous instances.
+A clone operation is a deep copy of another course's collections and image resources.
 
-**Permissions:**
+Endpoints
+---------
 
-You must have admin access in both courses in order to perform the copy.
+- `/courses/<pk>/clones`
 
-**Endpoints:**
+Methods
+-------
 
-- `GET /courses/<pk>/clones` List copies that have been initiated
-- `POST /courses/<pk>/clones` Request a copy of another course
+- `GET /courses/<pk>/clones` List clone records
+- `POST /courses/<pk>/clones` Request a clone of the specified course
+- `DELETE /courses/<pk>/clones` Clears clone records
 
-You must specify `{source_id: "<pk>"}` when submitting a POST request to identify the course to be copied. The
-destination of the copy is already given in the URL endpoint.
+You must specify `{source_id: "<pk>"}` when submitting a POST request. The value of the `source_id` should be
+the primary key of the course being cloned.
     '''
     def get(self, request, pk, format=None):
         clone_qs = Clone.objects.filter(model="Course", dest_pk=pk)
@@ -143,7 +145,7 @@ destination of the copy is already given in the URL endpoint.
         else:
             try:
                 course = Course.objects.get(pk=src_pk)
-                clone = course.copy_to(dest_pk)
+                clone = course.clone(dest_pk)
                 result["message"] = "Clone successful"
                 result["data"] = CloneSerializer(clone).data
             except Course.DoesNotExist:
@@ -151,6 +153,11 @@ destination of the copy is already given in the URL endpoint.
                 result["error"] = "Course %s not found" % src_pk
                 status = 404
         return Response(result, status=status)
+
+    def delete(self, request, pk, format=None):
+        result = Clone.objects.filter(model="Course", dest_pk=pk).delete()
+        num_deleted = result[0]
+        return Response({"message": "Deleted %s clone records" % num_deleted})
 
 
 class CollectionViewSet(viewsets.ModelViewSet):
@@ -166,12 +173,12 @@ Endpoints
 Methods
 -------
 
-- `get /collections`  Lists collections
-- `post /collections` Creates new collection
-- `get /collections/{pk}` Retrieves collection details
-- `put /collections/{pk}` Updates collection
-- `delete /collections/{pk}` Deletes a collection
-- `get /collections/{pk}/images`  Lists a collection's images
+- `GET /collections`  Lists collections
+- `POST /collections` Creates new collection
+- `GET /collections/{pk}` Retrieves collection details
+- `PUT /collections/{pk}` Updates collection
+- `DELETE /collections/{pk}` Deletes a collection
+- `GET /collections/{pk}/images`  Lists a collection's images
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
@@ -193,6 +200,7 @@ Methods
         serializer = self.get_serializer(collection, context={'request': request}, include=include)
         return Response(serializer.data)
 
+
 class CourseCollectionsView(GenericAPIView):
     '''
 A **course collections** resource is a set of *collections* that belong to a *course*.
@@ -208,6 +216,7 @@ Methods
 - `GET /courses/{pk}/collections`  Lists collections that belong to the course
 - `POST /courses/{pk}/collections` Creates a new collection and adds it to the course
 - `PUT /courses/{pk}/collections`  Updates collections
+- `DELETE /courses/{pk}/collections` Deletes collections
 
 Details
 -------
@@ -307,6 +316,12 @@ Provide an array of items, which are just collection objects:
 
         raise exceptions.APIException("Must specify one of 'items' or 'sort_order' to update a batch of collections for course %s." % course_pk)
 
+    def delete(self, request, pk=None, format=None):
+        course_pk = pk
+        results = Collection.objects.filter(course_id=course_pk).delete()
+        num_deleted = results[0]
+        return Response({"message": "Deleted %s collections in course %s" % (num_deleted, course_pk)})
+
 
 class CourseImagesListView(GenericAPIView):
     '''
@@ -321,8 +336,10 @@ Endpoints
 Methods
 -------
 
-- `get /courses/{pk}/images`  Lists images that belong to the course
-- `post /courses/{pk}/images` Uploads an image to the course
+- `GET /courses/{pk}/images`  Lists images that belong to the course
+- `POST /courses/{pk}/images` Uploads an image to the course
+- `DELETE /courses/{pk}/images` Deletes images that belong to the course
+
     '''
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
@@ -394,6 +411,16 @@ Methods
                 return Response(response_data + [serializer.errors], status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+    def delete(self, request, pk=None, format=None):
+        course_pk = pk
+        resources = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
+        num_deleted = 0
+        for resource in resources:
+            resource.delete() # calling manually because the instance delete() contains logic pertaining to the media store
+            num_deleted += 1
+        return Response({"message": "Deleted %s images in course %s" % (num_deleted, course_pk)})
+
+
 class CollectionImagesListView(GenericAPIView):
     '''
 A **collection images** resource is a set of *images* that are associated with a *collection*.
@@ -406,8 +433,8 @@ Endpoints
 Methods
 -------
 
-- `get /courses/{pk}/images`  Lists images that belong to the course
-- `post /courses/{pk}/images` Adds images to the collection that already exist in the course library.
+- `GET /courses/{pk}/images`  Lists images that belong to the course
+- `POST /courses/{pk}/images` Adds images to the collection that already exist in the course library.
     '''
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
@@ -443,8 +470,8 @@ Endpoints
 Methods
 -------
 
-- `get /collection-images/{pk}` Retrieves details of image associated with collection
-- `delete /collection-images/{pk}` Removes the image from the collection
+- `GET /collection-images/{pk}` Retrieves details of image associated with collection
+- `DELETE /collection-images/{pk}` Removes the image from the collection
     '''
     queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
@@ -473,8 +500,8 @@ Endpoints
 Methods
 -------
 
-- `get /images`  Lists images
-- `get /images/{pk}` Retrieves details of an image
+- `GET /images`  Lists images
+- `GET /images/{pk}` Retrieves details of an image
     '''
     queryset = Resource.objects.select_related('course', 'media_store')
     serializer_class = ResourceSerializer
