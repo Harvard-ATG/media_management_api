@@ -4,6 +4,7 @@ python:
 - '2.7'
 env:
 - DJANGO_SETTINGS_MODULE="media_management_api.settings.local"
+- BOTO_CONFIG=/dev/null
 install:
 - pip install -r media_management_api/requirements/local.txt
 before_script:
@@ -17,7 +18,7 @@ before_script:
 - cp -v media_management_api/settings/secure.py.travis media_management_api/settings/secure.py
 script:
 - python manage.py migrate --noinput
-- python manage.py test 
+- python manage.py test
 notifications:
   slack:
     secure: tMQ6vqRVgRk6tI9gu1neKGI6T1dI5MC0pwzeL56njkDuq0JlMYE5zSVYQErLe4JaPuitBGeQF4Tl0czsNvC+JASgxoyW4uDmb6csVjA/jppgoy/2mCaL6OsaIKBPMJJUUiIQPIwIzH3AaLhisgGMXdG6ZyGUALbd9CUey/vAkMxxlKedyFDw4Im8ctogzlG53FPLAdkWzM7FSYyh9kw/LpGD+fz7J62iyzRoRG1+N7rbfiWxh8BA55zhT/8o0/8MhL6CrvZC4xo8QijRN7Ate19A9YzsuhwGThjt17cs3M8MncgrQpnUEbZp5pLjU+eBDDXxwPDeDYoXkw/RKA5Fiy8g/NTdWWBwuBgjM0ZEiHwiqDesjX8oKdmsTb422AinBBYVjerVu2cv//amVV9EboeiZar3r2bcy1QCAHoJKO6qmu2FrB1SYdbDHzW3x5pTnaXJ/dhunSBXblEsiOoZbne9IncM+4H0PpkVTur7G2MHmN4k05l1WpJ2VLydQ+1W39fqik3lMUhMxTX1rJ87wuDCB7Qbmg5T6JlyZLv9kkw8zoLm8xw84usaC8FHIelmHqgcyk+PUUjquKFQrWMy9nokG5o+njWJYfXiv1rB9BE4d8rgoAH3ChZEWs4ecd5WOACZeDhLPd3CEQLyPJOKOfIpww3CKZL5cfzb8rL5I3I=
