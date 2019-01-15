@@ -3,8 +3,7 @@ language: python
 python:
 - '2.7'
 env:
-- DJANGO_SETTINGS_MODULE="media_management_api.settings.local"
-- BOTO_CONFIG=/dev/null
+- DJANGO_SETTINGS_MODULE="media_management_api.settings.local" BOTO_CONFIG=/dev/null
 install:
 - pip install -r media_management_api/requirements/local.txt
 before_script:
