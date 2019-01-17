@@ -39,6 +39,7 @@ image_detail = views.CourseImageViewSet.as_view({
 urlpatterns = [
     url(r'^$', views.APIRoot.as_view(), name="root"),
     url(r'^courses$', course_list, name='course-list'),
+    url(r'^courses/search$', views.CourseSearchView.as_view(), name='course-search'),
     url(r'^courses/(?P<pk>\d+)$', course_detail, name='course-detail'),
     url(r'^courses/(?P<pk>\d+)/course_copy', views.CourseCopyView.as_view(), name='course-clones'),
     url(r'^courses/(?P<pk>\d+)/collections$', views.CourseCollectionsView.as_view(), name='course-collections'),

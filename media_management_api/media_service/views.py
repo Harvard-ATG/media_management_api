@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import viewsets, status, exceptions
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -9,7 +10,7 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
 from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
-from media_management_api.media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
+from media_management_api.media_auth.permissions import CourseEndpointPermission, CourseSearchEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
 from .models import Course, Collection, Resource, CollectionResource, CourseCopy
 from .mediastore import processFileUploads, processRemoteImages
@@ -36,6 +37,7 @@ Courses Endpoints
 ----------------
 
 - `/courses`  Lists courses
+- `/courses/search?q=title|sis_course_id` Search courses
 - `/courses/{pk}` Course detail
 - `/courses/{pk}/course_copy` Lists a course's copy records
 - `/courses/{pk}/collections` Lists a course's collections
@@ -80,23 +82,17 @@ it to a course instance in this repository.
     def list(self, request, format=None):
         queryset = self.get_queryset()
 
-        # Search by Title
-        if 'title' in self.request.GET:
-            queryset = queryset.filter(title=self.request.GET['title'])
-
-        # Search by SIS Course ID
-        if 'sis_course_id' in self.request.GET:
-            queryset = queryset.filter(sis_course_id=self.request.GET['sis_course_id'])
-
-        # Search by Canvas Course ID
-        if 'canvas_course_id' in self.request.GET:
-            queryset = queryset.filter(canvas_course_id=self.request.GET['canvas_course_id'])
-
-        # Search by LTI context
+        # Filter by LTI context
         if 'lti_context_id' in self.request.GET:
             queryset = queryset.filter(lti_context_id=self.request.GET['lti_context_id'])
         if 'lti_tool_consumer_instance_guid' in self.request.GET:
             queryset = queryset.filter(lti_tool_consumer_instance_guid=self.request.GET['lti_tool_consumer_instance_guid'])
+
+        # Filter by title or SIS ID
+        if 'title' in self.request.GET:
+            queryset = queryset.filter(title=self.request.GET['title'])
+        if 'sis_course_id' in self.request.GET:
+            queryset = queryset.filter(sis_course_id=self.request.GET['sis_course_id'])
 
         serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
@@ -106,6 +102,36 @@ it to a course instance in this repository.
         include = ['images', 'collections']
         serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
+
+class CourseSearchView(GenericAPIView):
+
+    '''
+Search courses by title or SIS ID.
+
+Endpoints
+---------
+
+- `/courses/search`
+
+Methods
+-------
+
+- `GET /courses/search?q=title|sis_course_id`
+
+    '''
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+    permission_classes = (CourseSearchEndpointPermission,)
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
+        if 'q' not in self.request.GET:
+            return Response([])
+        searchtext = self.request.GET['q']
+        queryset = queryset.filter(Q(title__startswith=searchtext) | Q(sis_course_id__startswith=searchtext))
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
 
 class CourseCopyView(APIView):
     '''

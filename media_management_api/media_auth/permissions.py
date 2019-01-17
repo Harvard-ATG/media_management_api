@@ -14,13 +14,13 @@ class BaseScopePermission(BasePermission):
         self.scope = None
         self.loaded_scope = False
         self.auth_required = True
-    
+
     def is_authenticated(self, request, view):
         return request.user and request.user.is_authenticated()
-    
+
     def is_authenticated_or_read_only(self, request, view):
         return (request.method in READ_ONLY_METHODS or (request.user and request.user.is_authenticated()))
-    
+
     def has_permission(self, request, view):
         '''
         Implements has_permission().
@@ -52,10 +52,10 @@ class BaseScopePermission(BasePermission):
         has_method_perm = self.has_scope_method_perm(request, view, scope)
         has_target_perm = self.has_scope_target_perm(request, view, scope)
         has_object_perm = self.has_scope_object_perm(request, view, obj, scope)
-        
+
         has_perm = (has_method_perm and has_target_perm and has_object_perm)
         logger.debug("has_object_permission:%s (%s & %s & %s)" % (has_perm, has_method_perm, has_target_perm, has_object_perm))
-        
+
         return has_perm
 
     def has_scope_method_perm(self, request, view, scope):
@@ -75,15 +75,18 @@ class BaseScopePermission(BasePermission):
 
     def has_scope_target_perm(self, request, view, scope):
         return scope['target'] == 'course'
-    
+
     def has_scope_object_perm(self, request, view, obj, scope):
         return scope['object'] == '*'
-    
+
     def get_scope_from_request(self, request):
         if not self.loaded_scope:
             self.scope = get_scope_from_request(request)
             self.loaded_scope = True
         return self.scope
+
+class CourseSearchEndpointPermission(BaseScopePermission):
+    pass
 
 class CourseEndpointPermission(BaseScopePermission):
     """
@@ -107,7 +110,7 @@ class CourseEndpointPermission(BaseScopePermission):
                 has_perm = has_perm and (scope['object'] == '*')
 
         return has_perm
-    
+
     def has_object_permission(self, request, view, obj):
         # Special case: allow *all* for manifests
         action = view.action_map.get(request.method.lower())
@@ -116,7 +119,7 @@ class CourseEndpointPermission(BaseScopePermission):
 
         has_perm = super(CourseEndpointPermission, self).has_object_permission(request, view, obj)
         return has_perm
-        
+
     def has_scope_object_perm(self, request, view, obj, scope):
         has_perm = super(CourseEndpointPermission, self).has_scope_object_perm(request, view, obj, scope)
         return has_perm or (str(scope['object']) == str(obj.pk))
