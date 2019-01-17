@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile, Clone
+from .models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile, CourseCopy
 
 class CollectionsInline(admin.StackedInline):
     extra = 0
@@ -25,15 +25,14 @@ class MediaStoreAdmin(admin.ModelAdmin):
     search_fields = ('file_name', 'file_md5hash')
 
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('id', 'lti_context_id', 'lti_tool_consumer_instance_guid', 'title')
-    search_fields = ('title', 'lti_context_id')
-    inlines = (ResourcesInline, CollectionsInline)
+    list_display = ('id', 'sis_course_id', 'title', 'lti_context_id')
+    search_fields = ('title', 'sis_course_id', 'lti_context_id')
+    inlines = (CollectionsInline,)
 
 class CollectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'course', 'sort_order')
     ordering = ('course', 'sort_order')
     search_fields = ('title',)
-    inlines = (CollectionResourcesInline,)
 
     def get_queryset(self, request):
         qs = super(CollectionAdmin, self).get_queryset(request)
@@ -55,10 +54,10 @@ class UserProfileAdmin(admin.ModelAdmin):
         qs = super(UserProfileAdmin, self).get_queryset(request)
         return qs.select_related('user')
 
-class CloneAdmin(admin.ModelAdmin):
-    model = Clone
-    list_display = ('id', 'model', 'src_pk', 'dest_pk', 'state', 'created')
-    search_fields = ('src_pk', 'dest_pk')
+class CourseCopyAdmin(admin.ModelAdmin):
+    model = CourseCopy
+    list_display = ('id', 'model', 'source', 'dest', 'state', 'created')
+    search_fields = ('source', 'dest')
 
 admin.site.register(MediaStore, MediaStoreAdmin)
 admin.site.register(Course, CourseAdmin)
@@ -66,4 +65,4 @@ admin.site.register(Collection, CollectionAdmin)
 admin.site.register(Resource, ResourceAdmin)
 admin.site.register(CollectionResource)
 admin.site.register(UserProfile, UserProfileAdmin)
-admin.site.register(Clone, CloneAdmin)
+admin.site.register(CourseCopy, CourseCopyAdmin)

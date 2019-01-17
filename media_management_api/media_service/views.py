@@ -11,9 +11,9 @@ from rest_framework.permissions import IsAuthenticated
 from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
 from media_management_api.media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
 
-from .models import Course, Collection, Resource, MediaStore, CollectionResource, Clone
+from .models import Course, Collection, Resource, CollectionResource, CourseCopy
 from .mediastore import processFileUploads, processRemoteImages
-from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CloneSerializer
+from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CourseCopySerializer
 
 import logging
 
@@ -37,26 +37,36 @@ Courses Endpoints
 
 - `/courses`  Lists courses
 - `/courses/{pk}` Course detail
-- `/courses/{pk}/clones` Lists a course's clone records (e.g. if resources were copied from another course)
+- `/courses/{pk}/course_copy` Lists a course's copy records
 - `/courses/{pk}/collections` Lists a course's collections
 - `/courses/{pk}/images`  Lists a course's images
 
-LTI Attributes
---------------
-A course associated with an LTI context must have the following attributes at minimum:
+Querying the list of courses
+----------------------------
+
+The following query parameters can be used to query the list of courses:
+
+- lti_context_id
+- lti_tool_consumer_instance_guid
+- sis_course_id
+- title
+
+Examples:
+
+- `/courses?lti_context_id=<context_id>&lti_tool_consumer_instance_guid=<tool_consumer_instance_guid>`
+- `/courses?sis_course_id=<SIS_ID>`
+- `/courses?title=<TITLE>`
+
+Note on LTI Attributes:
+-----------------------
+
+A course associated with an LTI context should have the following attributes:
 
 - `lti_context_id` Opaque identifier that uniquely identifies tool context (i.e. Canvas Course)
 - `lti_tool_consumer_instance_guid` DNS of the consumer instance that launched the tool
 
-Together, these two attributes should be unique. These attributes should be present in an
-LTI launch as `context_id` and `tool_consumer_instance_guid`.
-
-To search for a course associated with an LTI context:
-
-- `/courses?lti_context_id=<context_id>&lti_tool_consumer_instance_guid=<tool_consumer_instance_guid>`
-
-Since one and only one instance of a course can exist with those two attributes, the response should
-be an empty list or a list with one object.
+Together, these two attributes should be enough to uniquely identify the course instance on the target platform and link
+it to a course instance in this repository.
     '''
     queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources', 'resources__media_store')
     serializer_class = CourseSerializer
@@ -70,11 +80,23 @@ be an empty list or a list with one object.
     def list(self, request, format=None):
         queryset = self.get_queryset()
 
-        # Filter queryset by LTI context params
-        lti_params = ('lti_context_id', 'lti_tool_consumer_instance_guid')
-        lti_filters = dict([(k, self.request.GET[k]) for k in lti_params if k in self.request.GET])
-        if len(lti_filters.keys()) > 0:
-            queryset = queryset.filter(**lti_filters)
+        # Search by Title
+        if 'title' in self.request.GET:
+            queryset = queryset.filter(title=self.request.GET['title'])
+
+        # Search by SIS Course ID
+        if 'sis_course_id' in self.request.GET:
+            queryset = queryset.filter(sis_course_id=self.request.GET['sis_course_id'])
+
+        # Search by Canvas Course ID
+        if 'canvas_course_id' in self.request.GET:
+            queryset = queryset.filter(canvas_course_id=self.request.GET['canvas_course_id'])
+
+        # Search by LTI context
+        if 'lti_context_id' in self.request.GET:
+            queryset = queryset.filter(lti_context_id=self.request.GET['lti_context_id'])
+        if 'lti_tool_consumer_instance_guid' in self.request.GET:
+            queryset = queryset.filter(lti_tool_consumer_instance_guid=self.request.GET['lti_tool_consumer_instance_guid'])
 
         serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
@@ -85,79 +107,81 @@ be an empty list or a list with one object.
         serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
 
-class CourseClonesView(APIView):
+class CourseCopyView(APIView):
     '''
-A **course clones** resource is for initiating and maintaining information about copying/cloning course resources.
-
-A clone operation is a deep copy of another course's collections and image resources.
+A **course copy** resource is used tocopy of another course's collections and image resources.
 
 Endpoints
 ---------
 
-- `/courses/<pk>/clones`
+- `/courses/<pk>/course_copy`
 
 Methods
 -------
 
-- `GET /courses/<pk>/clones` List clone records
-- `POST /courses/<pk>/clones` Request a clone of the specified course
-- `DELETE /courses/<pk>/clones` Clears clone records
+- `GET /courses/<pk>/course_copy` List record of course copies
+- `POST /courses/<pk>/course_copy` Request a copy of the specified course
+- `DELETE /courses/<pk>/course_copy` Clears copy records
 
 You must specify `{source_id: "<pk>"}` when submitting a POST request. The value of the `source_id` should be
-the primary key of the course being cloned.
+the primary key of the course being copied.
     '''
     def get(self, request, pk, format=None):
-        clone_qs = Clone.objects.filter(model="Course", dest_pk=pk)
+        course_pk = pk
+        copy_qs = CourseCopy.objects.filter(dest_id=course_pk)
         if 'source_id' in request.GET:
-            clone_qs = clone_qs.filter(src_pk=request.GET['source_id'])
+            copy_qs = copy_qs.filter(source_id=request.GET['source_id'])
         if 'state' in request.GET:
-            clone_qs = clone_qs.filter(state=request.GET['state'])
-        serializer = CloneSerializer(clone_qs, many=True)
+            copy_qs = copy_qs.filter(state=request.GET['state'])
+        serializer = CourseCopySerializer(copy_qs, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk, format=None):
         '''
-        Initiates a clone if one does not already exist for the src/dest combination.
-        The assumption is that a course should only be cloned once into the target.
+        Initiates a copy if one does not already exist for the src/dest combination.
+        The assumption is that a course should only be copied once into the target.
         '''
         dest_pk = pk
-        if 'source_id' not in request.data:
-            raise exceptions.ValidationError("Must provide 'source_id' to identify the course to clone.", 400)
-        src_pk = str(request.data['source_id'])
-        if src_pk == pk:
-            raise exceptions.ValidationError("Cannot clone self", 400)
+        if 'copy_source_id' not in request.data:
+            raise exceptions.ValidationError("Must provide 'copy_source_id' to identify the course to copy.", 400)
+        source_id = str(request.data['copy_source_id'])
+        if source_id == pk:
+            raise exceptions.ValidationError("Cannot copy self", 400)
         status = 200
         result = {}
-        clone_qs = Clone.objects.filter(model="Course", dest_pk=dest_pk, src_pk=src_pk)
-        if clone_qs.exists():
-            clone = clone_qs[0]
-            result["data"] = CloneSerializer(clone).data
-            if clone.state == Clone.STATE_INITIATED:
-                result["message"] = "Clone already initiated"
-            elif clone.state == Clone.STATE_COMPLETED:
-                result["message"] = "Clone already completed"
-            elif clone.state == Clone.STATE_ERROR:
-                result["message"] = "Clone error"
+        copy_qs = CourseCopy.objects.filter(dest_id=dest_pk, source_id=source_id)
+        if copy_qs.exists():
+            course_copy = copy_qs[0]
+            result["data"] = CourseCopySerializer(course_copy, context={'request': request}).data
+            if course_copy.state == CourseCopy.STATE_INITIATED:
+                result["message"] = "Copy already initiated"
+            elif course_copy.state == CourseCopy.STATE_COMPLETED:
+                result["message"] = "Copy already completed"
+            elif course_copy.state == CourseCopy.STATE_ERROR:
+                result["message"] = "Copy error"
                 status = 500
             else:
-                result["message"] = "Clone state unknown"
+                result["message"] = "Copy state unknown"
                 status = 500
         else:
             try:
-                course = Course.objects.get(pk=src_pk)
-                clone = course.clone(dest_pk)
-                result["message"] = "Clone successful"
-                result["data"] = CloneSerializer(clone).data
+                course = Course.objects.get(pk=source_id)
+                course_copy = course.copy(dest_pk)
+                result["message"] = "Copy successful"
+                result["data"] = CourseCopySerializer(course_copy, context={'request': request}).data
             except Course.DoesNotExist:
-                result["message"] = "Clone error"
-                result["error"] = "Course %s not found" % src_pk
+                result["message"] = "Copy error"
+                result["error"] = "Course %s not found" % source_id
                 status = 404
         return Response(result, status=status)
 
     def delete(self, request, pk, format=None):
-        result = Clone.objects.filter(model="Course", dest_pk=pk).delete()
+        course_pk = pk
+        result = CourseCopy.objects.filter(dest_id=course_pk).delete()
         num_deleted = result[0]
-        return Response({"message": "Deleted %s clone records" % num_deleted})
+        msg = "Deleted %s copy records in course %s" % (num_deleted, course_pk)
+        logger.info(msg)
+        return Response({"message": msg})
 
 
 class CollectionViewSet(viewsets.ModelViewSet):
@@ -320,7 +344,9 @@ Provide an array of items, which are just collection objects:
         course_pk = pk
         results = Collection.objects.filter(course_id=course_pk).delete()
         num_deleted = results[0]
-        return Response({"message": "Deleted %s collections in course %s" % (num_deleted, course_pk)})
+        msg = "Deleted %s collections in course %s" % (num_deleted, course_pk)
+        logger.info(msg)
+        return Response({"message": msg})
 
 
 class CourseImagesListView(GenericAPIView):
@@ -418,7 +444,9 @@ Methods
         for resource in resources:
             resource.delete() # calling manually because the instance delete() contains logic pertaining to the media store
             num_deleted += 1
-        return Response({"message": "Deleted %s images in course %s" % (num_deleted, course_pk)})
+        msg = "Deleted %s images in course %s" % (num_deleted, course_pk)
+        logger.info(msg)
+        return Response({"message": msg})
 
 
 class CollectionImagesListView(GenericAPIView):

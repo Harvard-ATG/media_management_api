@@ -47,10 +47,10 @@ class MediaStore(BaseModel):
 
     class Meta:
         verbose_name = 'media_store'
-        verbose_name_plural = 'media_stores'
+        verbose_name_plural = 'media_store'
 
     def __unicode__(self):
-        return "{0}:{1}".format(self.id, self.file_name)
+        return "MediaStore:{0}:{1}".format(self.id, self.file_name)
 
     def _get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
@@ -114,14 +114,15 @@ class UserProfile(BaseModel):
         verbose_name_plural = 'user_profiles'
 
     def __unicode__(self):
-        return u'UserProfile:%s:%s' % (self.id, self.sis_user_id)
+        return u'UserProfile:%s' % (self.sis_user_id)
 
 class Course(BaseModel):
     title = models.CharField(max_length=255)
+    sis_course_id = models.CharField(max_length=128, null=True, unique=True)
+    canvas_course_id = models.IntegerField(null=True)
     lti_context_id = models.CharField(max_length=128, null=True)
     lti_tool_consumer_instance_guid = models.CharField(max_length=1024, null=True)
     lti_tool_consumer_instance_name = models.CharField(max_length=128, null=True)
-    lti_custom_canvas_api_domain = models.CharField(max_length=128, null=True)
     lti_context_title = models.CharField(max_length=256, null=True)
     lti_context_label = models.CharField(max_length=256, null=True)
 
@@ -131,55 +132,66 @@ class Course(BaseModel):
         ordering = ["title"]
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
-    def clone(self, course_pk):
-        clone_data = {
+    def copy(self, dest_course_pk):
+        copy_data = {
             "total": 0,
             "resources": {},
             "collections": {},
             "collection_resources": {},
         }
-        dest_course = Course.objects.get(pk=course_pk)
-        clone = Clone(model='Course', src_pk=self.pk, dest_pk=dest_course.pk)
-        clone.initiate()
+        dest_course = Course.objects.get(pk=dest_course_pk)
+        course_copy = CourseCopy(source=self, dest=dest_course)
+        course_copy.initiate()
 
-        logger.info("Clone %d started from course %s to %s" % (clone.pk, self.pk, course_pk))
+        logger.info("Copy %d started from course %s to %s" % (course_copy.pk, self.pk, dest_course_pk))
         try:
             with transaction.atomic():
                 # Copy collections from the course
                 for collection in self.collections.all():
-                    logger.info("Cloning collection %s [clone_id=%s]" % (collection.pk, clone.pk))
+                    logger.info("Copying collection %s [course_copy_id=%s]" % (collection.pk, course_copy.pk))
                     from_pk, to_pk = collection.copy_to(dest_course)
-                    clone_data["collections"][from_pk] = to_pk
-                    clone_data["total"] += 1
+                    copy_data["collections"][from_pk] = to_pk
+                    copy_data["total"] += 1
 
                 # Copy resources from the course
                 for resource in self.resources.all():
-                    logger.info("Cloning resource %s [clone_id=%s]" % (resource.pk, clone.pk))
+                    logger.info("Copying resource %s [course_copy_id=%s]" % (resource.pk, course_copy.pk))
                     from_pk, to_pk = resource.copy_to(dest_course)
-                    clone_data["resources"][from_pk] = to_pk
-                    clone_data["total"] += 1
+                    copy_data["resources"][from_pk] = to_pk
+                    copy_data["total"] += 1
 
                 # Copy mapping of the resources and collections from the course
                 for collection in self.collections.all():
                     for collection_resource in collection.resources.all():
-                        logger.info("Cloning collection resource %s [clone_id=%s]" % (collection_resource.pk, clone.pk))
-                        dest_collection_pk = clone_data["collections"][collection_resource.collection_id]
-                        dest_resource_pk = clone_data["resources"][collection_resource.resource_id]
+                        logger.info("Copying collection resource %s [course_copy_id=%s]" % (collection_resource.pk, course_copy.pk))
+                        dest_collection_pk = copy_data["collections"][collection_resource.collection_id]
+                        dest_resource_pk = copy_data["resources"][collection_resource.resource_id]
                         from_pk, to_pk = collection_resource.copy_to(dest_collection_pk, dest_resource_pk)
-                        clone_data["collection_resources"][from_pk] = to_pk
-                        clone_data["total"] += 1
+                        copy_data["collection_resources"][from_pk] = to_pk
+                        copy_data["total"] += 1
         except Error as e:
-            logger.exception("Clone error from course %s to %s" % (clone.src_pk, clone.dest_pk))
-            clone.fail(str(e))
+            logger.exception("Copy error from course %s to %s" % (course_copy.source.pk, course_copy.dest.pk))
+            course_copy.fail(str(e))
             raise e
 
-        clone.complete(clone_data)
-        logger.info("Clone %d completed from course %s to %s" % (clone.pk, clone.src_pk, clone.dest_pk))
+        course_copy.complete(copy_data)
+        logger.info("Copy %d completed from course %s to %s" % (course_copy.pk, course_copy.source.pk, course_copy.dest.pk))
 
-        return clone
+        return course_copy
 
     def __unicode__(self):
-        return u'{0}:{1}:{2}'.format(self.id, self.lti_context_id, self.title)
+        return u'Course:%s:%s' % (self.pk, self.title)
+
+class CourseAdmins(BaseModel):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = 'course_admin'
+        verbose_name_plural = 'course_admins'
+
+    def __unicode__(self):
+        return u'CourseAdmin:%s' % (self.id)
 
 def metadata_default():
     return json.dumps([])
@@ -281,7 +293,7 @@ class Resource(BaseModel, SortOrderModelMixin):
             return []
 
     def __unicode__(self):
-        return u'{0}:{1}'.format(self.id, self.title)
+        return u'Resource:{0}:{1}'.format(self.id, self.title)
 
     @classmethod
     def get_course_images(cls, course_pk):
@@ -324,7 +336,7 @@ class Collection(BaseModel, SortOrderModelMixin):
         return from_pk, to_pk
 
     def __unicode__(self):
-        return u'%s:%s' % (self.id, self.title)
+        return u'Collection:%s:%s' % (self.id, self.title)
 
     @classmethod
     def get_course_collections(cls, course_pk):
@@ -358,14 +370,14 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
         return from_pk, to_pk
 
     def __unicode__(self):
-        return u'{0}'.format(self.id)
+        return u'CollectionResource:{0}'.format(self.id)
 
     @classmethod
     def get_collection_images(cls, collection_pk):
         images = cls.objects.filter(collection__pk=collection_pk).order_by('sort_order')
         return images
 
-class Clone(BaseModel):
+class CourseCopy(BaseModel):
     STATE_INITIATED = 'initiated'
     STATE_COMPLETED = 'completed'
     STATE_ERROR = 'error'
@@ -374,16 +386,15 @@ class Clone(BaseModel):
         (STATE_COMPLETED, 'Completed'),
         (STATE_ERROR, 'Error'),
     )
-    model = models.CharField(max_length=255)
-    src_pk = models.CharField(max_length=255)
-    dest_pk = models.CharField(max_length=255)
+    source = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='source_copies')
+    dest = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='dest_copies')
     state = models.CharField(max_length=100, choices=STATE_CHOICES, default=STATE_INITIATED)
     error = models.TextField()
     data = JSONField(default='{}')
 
     class Meta:
-        verbose_name = 'clone'
-        verbose_name_plural = 'clones'
+        verbose_name = 'course copy'
+        verbose_name_plural = 'course copy'
         ordering = ['-created']
 
     def initiate(self, data=None):
@@ -410,3 +421,6 @@ class Clone(BaseModel):
         self.data = data
         self.save(update_fields=['data', 'updated'])
         return self
+
+    def __unicode__(self):
+        return u'CourseCopy:%s' % (self.id)
