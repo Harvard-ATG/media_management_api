@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile, CourseCopy
+from .models import MediaStore, Course, CourseUser, Collection, Resource, CollectionResource, UserProfile, CourseCopy
 
 class CollectionsInline(admin.StackedInline):
     extra = 0
@@ -28,6 +28,9 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = ('id', 'sis_course_id', 'title', 'lti_context_id')
     search_fields = ('title', 'sis_course_id', 'lti_context_id')
     inlines = (CollectionsInline,)
+
+class CourseUserAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user_profile', 'is_admin')
 
 class CollectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'course', 'sort_order')
@@ -61,6 +64,7 @@ class CourseCopyAdmin(admin.ModelAdmin):
 
 admin.site.register(MediaStore, MediaStoreAdmin)
 admin.site.register(Course, CourseAdmin)
+admin.site.register(CourseUser, CourseUserAdmin)
 admin.site.register(Collection, CollectionAdmin)
 admin.site.register(Resource, ResourceAdmin)
 admin.site.register(CollectionResource)

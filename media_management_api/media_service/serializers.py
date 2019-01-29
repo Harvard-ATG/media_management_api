@@ -270,7 +270,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Course
-        fields = ( 'id', 'title', 'sis_course_id', 'canvas_course_id', 'lti_context_id', 'lti_tool_consumer_instance_guid', 'created', 'updated', 'url', 'collections_url', 'images_url')
+        fields = ( 'id', 'title', 'sis_course_id', 'canvas_course_id', 'lti_context_id', 'lti_context_title', 'lti_context_label', 'lti_tool_consumer_instance_guid', 'lti_tool_consumer_instance_name', 'created', 'updated', 'url', 'collections_url', 'images_url')
 
     def __init__(self, *args, **kwargs):
         include = kwargs.pop('include', [])

@@ -182,16 +182,37 @@ class Course(BaseModel):
     def __unicode__(self):
         return u'Course:%s:%s' % (self.pk, self.title)
 
-class CourseAdmins(BaseModel):
+class CourseUser(BaseModel):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    is_admin = models.BooleanField(default=False)
+
+    @classmethod
+    def get_course_ids_for_user(cls, user_profile):
+        return cls.objects.filter(user_profile=user_profile).values_list('course_id', flat=True).order_by('id')
+
+    @classmethod
+    def add_user_to_course(cls, user=None, course_id=None, is_admin=False):
+        course = Course.objects.get(pk=course_id) # Will raise Course.DoesNotExist if invalid course_id
+        try:
+            course_user = cls.objects.get(user_profile=user.profile, course_id=course_id)
+        except CourseUser.DoesNotExist:
+            course_user = cls(user_profile=user.profile, course_id=course_id)
+        except CourseUser.MultipleObjectsReturned:
+            cls.objects.filter(user_profile=user.profile, course_id=course_id).delete()
+            course_user = cls(user_profile=user.profile, course_id=course_id)
+
+        course_user.is_admin = is_admin
+        course_user.save()
+        return course_user
 
     class Meta:
-        verbose_name = 'course_admin'
-        verbose_name_plural = 'course_admins'
+        verbose_name = 'course user'
+        verbose_name_plural = 'course users'
+        unique_together = ('course', 'user_profile', 'is_admin')
 
     def __unicode__(self):
-        return u'CourseAdmin:%s' % (self.id)
+        return u'CourseUser:%s' % (self.id)
 
 def metadata_default():
     return json.dumps([])

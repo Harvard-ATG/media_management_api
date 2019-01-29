@@ -10,7 +10,7 @@ from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
 from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
-from media_management_api.media_auth.permissions import CourseEndpointPermission, CourseSearchEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
+from media_management_api.media_auth.permissions import IsCourseUserAuthenticated, CollectionEndpointPermission, ResourceEndpointPermission
 
 from .models import Course, Collection, Resource, CollectionResource, CourseCopy
 from .mediastore import processFileUploads, processRemoteImages
@@ -72,21 +72,25 @@ it to a course instance in this repository.
     '''
     queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources', 'resources__media_store')
     serializer_class = CourseSerializer
-    permission_classes = (CourseEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
 
     def get_queryset(self):
         queryset = super(CourseViewSet, self).get_queryset()
-        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
         return queryset
 
     def list(self, request, format=None):
         queryset = self.get_queryset()
+        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
 
         # Filter by LTI context
         if 'lti_context_id' in self.request.GET:
             queryset = queryset.filter(lti_context_id=self.request.GET['lti_context_id'])
         if 'lti_tool_consumer_instance_guid' in self.request.GET:
             queryset = queryset.filter(lti_tool_consumer_instance_guid=self.request.GET['lti_tool_consumer_instance_guid'])
+
+        # Filter by Canvas course ID
+        if 'canvas_course_id' in self.request.GET:
+            queryset = queryset.filter(canvas_course_id=self.request.GET['canvas_course_id'])
 
         # Filter by title or SIS ID
         if 'title' in self.request.GET:
@@ -121,7 +125,7 @@ Methods
     '''
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    permission_classes = (CourseSearchEndpointPermission,)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, format=None):
         queryset = self.get_queryset()
@@ -133,7 +137,7 @@ Methods
         return Response(serializer.data)
 
 
-class CourseCopyView(APIView):
+class CourseCopyView(GenericAPIView):
     '''
 A **course copy** resource is used tocopy of another course's collections and image resources.
 
@@ -152,14 +156,18 @@ Methods
 You must specify `{source_id: "<pk>"}` when submitting a POST request. The value of the `source_id` should be
 the primary key of the course being copied.
     '''
+    queryset = CourseCopy.objects.all()
+    serializer_class = CourseCopySerializer
+    permission_classes = (IsCourseUserAuthenticated,)
+
     def get(self, request, pk, format=None):
         course_pk = pk
-        copy_qs = CourseCopy.objects.filter(dest_id=course_pk)
+        copy_qs = self.get_queryset().filter(dest_id=course_pk)
         if 'source_id' in request.GET:
             copy_qs = copy_qs.filter(source_id=request.GET['source_id'])
         if 'state' in request.GET:
             copy_qs = copy_qs.filter(state=request.GET['state'])
-        serializer = CourseCopySerializer(copy_qs, many=True, context={'request': request})
+        serializer = self.get_serializer(copy_qs, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk, format=None):
@@ -168,6 +176,9 @@ the primary key of the course being copied.
         The assumption is that a course should only be copied once into the target.
         '''
         dest_pk = pk
+        course = get_object_or_404(Course, pk=pk)
+        self.check_object_permissions(request, course)
+
         if 'copy_source_id' not in request.data:
             raise exceptions.ValidationError("Must provide 'copy_source_id' to identify the course to copy.", 400)
         source_id = str(request.data['copy_source_id'])
@@ -175,10 +186,10 @@ the primary key of the course being copied.
             raise exceptions.ValidationError("Cannot copy self", 400)
         status = 200
         result = {}
-        copy_qs = CourseCopy.objects.filter(dest_id=dest_pk, source_id=source_id)
+        copy_qs = self.get_queryset().filter(dest_id=dest_pk, source_id=source_id)
         if copy_qs.exists():
             course_copy = copy_qs[0]
-            result["data"] = CourseCopySerializer(course_copy, context={'request': request}).data
+            result["data"] = self.get_serializer(course_copy, context={'request': request}).data
             if course_copy.state == CourseCopy.STATE_INITIATED:
                 result["message"] = "Copy already initiated"
             elif course_copy.state == CourseCopy.STATE_COMPLETED:
@@ -194,7 +205,7 @@ the primary key of the course being copied.
                 course = Course.objects.get(pk=source_id)
                 course_copy = course.copy(dest_pk)
                 result["message"] = "Copy successful"
-                result["data"] = CourseCopySerializer(course_copy, context={'request': request}).data
+                result["data"] = self.get_serializer(course_copy, context={'request': request}).data
             except Course.DoesNotExist:
                 result["message"] = "Copy error"
                 result["error"] = "Course %s not found" % source_id
@@ -203,7 +214,10 @@ the primary key of the course being copied.
 
     def delete(self, request, pk, format=None):
         course_pk = pk
-        result = CourseCopy.objects.filter(dest_id=course_pk).delete()
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
+        result = self.get_queryset().filter(dest_id=course_pk).delete()
         num_deleted = result[0]
         msg = "Deleted %s copy records in course %s" % (num_deleted, course_pk)
         logger.info(msg)
@@ -302,10 +316,13 @@ Provide an array of items, which are just collection objects:
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (CollectionEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
+        course = get_object_or_404(Course, pk=pk)
+        self.check_object_permissions(request, course)
+
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         include = ['images']
         serializer = self.get_serializer(collections, many=True, context={'request': request}, include=include)
@@ -315,6 +332,8 @@ Provide an array of items, which are just collection objects:
         course_pk = pk
         data = request.data.copy()
         course = get_object_or_404(Course, pk=pk)
+        self.check_object_permissions(request, course)
+
         data['course_id'] = course.pk
         serializer = self.get_serializer(data=data, context={'request': request})
         if serializer.is_valid():
@@ -324,6 +343,9 @@ Provide an array of items, which are just collection objects:
 
     def put(self, request, pk=None, format=None):
         course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         collection_ids = [c.pk for c in collections]
         collection_map = dict([(c.pk, c) for c in collections])
@@ -368,6 +390,8 @@ Provide an array of items, which are just collection objects:
 
     def delete(self, request, pk=None, format=None):
         course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
         results = Collection.objects.filter(course_id=course_pk).delete()
         num_deleted = results[0]
         msg = "Deleted %s collections in course %s" % (num_deleted, course_pk)
@@ -396,7 +420,7 @@ Methods
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    permission_classes = (ResourceEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
@@ -407,7 +431,10 @@ Methods
     def post(self, request, pk=None, format=None):
         logger.debug("request content_type=%s data=%s" % (request.content_type, request.data))
         request_data = request.data.copy()
-        course = get_object_or_404(Course, pk=pk)
+        course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
         request_data['course_id'] = course.pk
         files = []
         response_data = []
@@ -465,7 +492,10 @@ Methods
 
     def delete(self, request, pk=None, format=None):
         course_pk = pk
-        resources = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
+        resources = self.get_queryset().filter(course=course).order_by('sort_order')
         num_deleted = 0
         for resource in resources:
             resource.delete() # calling manually because the instance delete() contains logic pertaining to the media store
@@ -487,12 +517,12 @@ Endpoints
 Methods
 -------
 
-- `GET /courses/{pk}/images`  Lists images that belong to the course
-- `POST /courses/{pk}/images` Adds images to the collection that already exist in the course library.
+- `GET /collections/{pk}/images`  Lists images that belong to the course
+- `POST /collections/{pk}/images` Adds images to the collection that already exist in the course library.
     '''
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsCourseUserAuthenticated,)
 
     def get(self, request, pk=None, format=None):
         collection_resources = self.get_queryset().filter(collection__pk=pk).order_by('sort_order')
@@ -501,6 +531,8 @@ Methods
 
     def post(self, request, pk=None, format=None):
         collection = get_object_or_404(Collection, pk=pk)
+        self.check_object_permissions(request, collection.course)
+
         data = []
         for collection_resource in request.data:
             collection_resource = collection_resource.copy()
@@ -529,7 +561,7 @@ Methods
     '''
     queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsCourseUserAuthenticated,)
 
     def get(self, request, pk=None, format=None):
          collection_resource = self.get_object()
@@ -538,6 +570,8 @@ Methods
 
     def delete(self, request, pk=None, format=None):
         collection_resource = self.get_object()
+        self.check_object_permissions(request, collection_resource.collection.course)
+
         collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

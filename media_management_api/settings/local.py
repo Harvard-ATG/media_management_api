@@ -16,13 +16,4 @@ DEBUG_TOOLBAR_CONFIG = {
     'INTERCEPT_REDIRECTS': False,
 }
 
-# Logging
-
-# Log to console instead of a file when running locally
-LOGGING['handlers']['default'] = {
-    'level': logging.DEBUG,
-    'class': 'logging.StreamHandler',
-    'formatter': 'simple',
-}
-
 dictConfig(LOGGING)
