@@ -1,4 +1,4 @@
-from media_management_api.media_service.models import CourseUser
+from media_management_api.media_service.models import CourseUser, UserProfile
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,7 +13,13 @@ class BaseCourseFilter(object):
         if user.is_superuser or user.is_staff:
             return queryset
 
-        course_ids_queryset = CourseUser.get_course_ids_for_user(user.profile)
+        try:
+            user_profile = user.profile
+        except UserProfile.DoesNotExist:
+            logger.warn("user %s does not have a related profile!" % user)
+            return queryset
+
+        course_ids_queryset = CourseUser.get_course_ids_for_user(user_profile)
         course_ids = list(course_ids_queryset)
         filters = {self.filter_key:course_ids}
         logger.debug("Applying course filter to queryset: %s" % filters)

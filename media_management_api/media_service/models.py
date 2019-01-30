@@ -1,6 +1,6 @@
 from django.db import models, transaction, Error
 from django.db.models import Max
-
+from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 import urllib
@@ -108,6 +108,21 @@ class MediaStore(BaseModel):
 class UserProfile(BaseModel):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, related_name="profile", null=True, blank=True)
     sis_user_id = models.CharField(max_length=60, unique=True, blank=True, null=True)
+
+    @classmethod
+    def get_or_create_profile(cls, sis_user_id):
+        user_profiles = cls.objects.filter(sis_user_id=sis_user_id)
+        user_profile = None
+        if len(user_profiles) == 0:
+            user_profile = cls(sis_user_id=sis_user_id)
+            user_profile.save()
+        else:
+            user_profile = user_profiles[0]
+        if not user_profile.user:
+            user = User.objects.create_user(username="UserProfile:%s" % user_profile.id, password=None)
+            user_profile.user = user
+            user_profile.save()
+        return user_profile
 
     class Meta:
         verbose_name = 'user_profile'

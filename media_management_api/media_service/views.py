@@ -129,6 +129,7 @@ Methods
 
     def get(self, request, format=None):
         queryset = self.get_queryset()
+        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
         if 'q' not in self.request.GET:
             return Response([])
         searchtext = self.request.GET['q']
@@ -179,7 +180,7 @@ the primary key of the course being copied.
         course = get_object_or_404(Course, pk=pk)
         self.check_object_permissions(request, course)
 
-        if 'copy_source_id' not in request.data:
+        if 'copy_source_id' not in request.data or not request.data['copy_source_id']:
             raise exceptions.ValidationError("Must provide 'copy_source_id' to identify the course to copy.", 400)
         source_id = str(request.data['copy_source_id'])
         if source_id == pk:
@@ -424,6 +425,9 @@ Methods
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
         images = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         serializer = self.get_serializer(images, many=True, context={'request': request})
         return Response(serializer.data)

@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.utils import timezone
 from media_management_api.media_service.models import UserProfile, Course, CourseUser
 from .models import Application, Token
@@ -75,17 +74,7 @@ def get_token_refresh(token):
     return token.created + datetime.timedelta(**TOKEN_REFRESH)
 
 def get_or_create_user(user_id):
-    user_profiles = UserProfile.objects.filter(sis_user_id=user_id)
-    user_profile = None
-    if len(user_profiles) == 0:
-        user_profile = UserProfile(sis_user_id=user_id)
-        user_profile.save()
-    else:
-        user_profile = user_profiles[0]
-    if not user_profile.user:
-        user = User.objects.create_user(username="UserProfile:%s" % user_profile.id, password=None)
-        user_profile.user = user
-        user_profile.save()
+    user_profile = UserProfile.get_or_create_profile(user_id)
     return user_profile.user
 
 def add_user_to_course(user=None, course_id=None, is_admin=False):
