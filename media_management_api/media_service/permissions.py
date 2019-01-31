@@ -10,12 +10,12 @@ class IsCourseUserAuthenticated(BasePermission):
     def has_permission(self, request, view):
         '''Returns True if the user is authenticated, otherwise False.'''
         has_perm = bool(request.user and request.user.is_authenticated)
-        logger.debug("user %s for request %s %s has_permission: %s" % (request.user.id, request.method, request.path, has_perm))
+        logger.debug("user %s has_permission for request %s %s => %s" % (request.user.id if request.user else None, request.method, request.path, has_perm))
         return has_perm
 
     def has_object_permission(self, request, view, object):
         has_perm = self._has_object_permission(request, view, object)
-        logger.debug("user %s for request %s %s has_object_permission: %s" % (request.user.id, request.method, request.path, has_perm))
+        logger.debug("user %s has_object_permission for request %s %s => %s" % (request.user.id, request.method, request.path, has_perm))
         return has_perm
 
     def _has_object_permission(self, request, view, object):
