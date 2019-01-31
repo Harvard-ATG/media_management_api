@@ -203,19 +203,23 @@ class CourseUser(BaseModel):
     is_admin = models.BooleanField(default=False)
 
     @classmethod
-    def get_course_ids_for_user(cls, user_profile):
+    def get_course_ids(cls, user_profile):
         return list(cls.objects.filter(user_profile=user_profile).values_list('course_id', flat=True).order_by('id'))
 
     @classmethod
     def add_user_to_course(cls, user=None, course_id=None, is_admin=False):
+        return cls.add_to_course(user_profile=user.profile, course_id=course_id, is_admin=is_admin)
+
+    @classmethod
+    def add_to_course(cls, user_profile=None, course_id=None, is_admin=False):
         course = Course.objects.get(pk=course_id) # Will raise Course.DoesNotExist if invalid course_id
         try:
-            course_user = cls.objects.get(user_profile=user.profile, course_id=course_id)
+            course_user = cls.objects.get(user_profile=user_profile, course_id=course_id)
         except CourseUser.DoesNotExist:
-            course_user = cls(user_profile=user.profile, course_id=course_id)
+            course_user = cls(user_profile=user_profile, course_id=course_id)
         except CourseUser.MultipleObjectsReturned:
-            cls.objects.filter(user_profile=user.profile, course_id=course_id).delete()
-            course_user = cls(user_profile=user.profile, course_id=course_id)
+            cls.objects.filter(user_profile=user_profile, course_id=course_id).delete()
+            course_user = cls(user_profile=user_profile, course_id=course_id)
 
         course_user.is_admin = is_admin
         course_user.save()

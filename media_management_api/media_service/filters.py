@@ -23,7 +23,7 @@ class IsCourseUserFilterBackend(object):
             raise APIException("User profile missing")
 
         # Limit queryset to the courses that the user belongs to
-        course_ids = CourseUser.get_course_ids_for_user(user_profile)
+        course_ids = CourseUser.get_course_ids(user_profile)
         filter_key = "pk__in"
         if hasattr(view, 'course_user_filter_key'):
             filter_key = view.course_user_filter_key
