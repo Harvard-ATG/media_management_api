@@ -629,4 +629,4 @@ Methods
         return self.filter_queryset(queryset)
 
     def check_object_permissions(self, request, obj):
-        super(CollectionViewSet, self).check_object_permissions(request, obj.course)
+        super(CourseImageViewSet, self).check_object_permissions(request, obj.course)
