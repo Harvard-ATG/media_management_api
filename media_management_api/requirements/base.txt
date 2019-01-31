@@ -1,4 +1,4 @@
-Django==1.11.12
+Django==1.11.18
 psycopg2==2.7.4
 redis==2.10.3
 django-redis-cache==1.7.1
@@ -11,4 +11,4 @@ django-cors-headers==2.2.0
 boto==2.48.0
 pillow==5.1.0
 python-magic==0.4.15
-requests==2.18.4
+requests==2.21.0
