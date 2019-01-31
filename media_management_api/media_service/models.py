@@ -204,7 +204,7 @@ class CourseUser(BaseModel):
 
     @classmethod
     def get_course_ids_for_user(cls, user_profile):
-        return cls.objects.filter(user_profile=user_profile).values_list('course_id', flat=True).order_by('id')
+        return list(cls.objects.filter(user_profile=user_profile).values_list('course_id', flat=True).order_by('id'))
 
     @classmethod
     def add_user_to_course(cls, user=None, course_id=None, is_admin=False):

@@ -30,7 +30,7 @@ class IsCourseUserAuthenticated(BasePermission):
         try:
             user_profile = user.profile
         except UserProfile.DoesNotExist:
-            logger.warn("user %s does not have a related profile!" % user)
+            logger.exception("User profile missing for user: %s" % user)
             return False
 
         # Allow members of the course to access any read-only or "safe" method
@@ -41,22 +41,4 @@ class IsCourseUserAuthenticated(BasePermission):
             has_perm = users_qs.exists()
         else:
             has_perm = users_qs.filter(is_admin=True).exists()
-        return has_perm
-
-
-class ResourceEndpointPermission(IsCourseUserAuthenticated):
-    def has_object_permission(self, request, view, obj):
-        has_perm = super(ResourceEndpointPermission, self).has_object_permission(request, view, obj.course)
-        return has_perm
-
-
-class CollectionEndpointPermission(IsCourseUserAuthenticated):
-    def has_object_permission(self, request, view, obj):
-        has_perm = super(CollectionEndpointPermission, self).has_object_permission(request, view, obj.course)
-        return has_perm
-
-
-class CollectionResourceEndpointPermission(IsCourseUserAuthenticated):
-    def has_object_permission(self, request, view, obj):
-        has_perm = super(CollectionResourceEndpointPermission, self).has_object_permission(request, view, obj.collection.course)
         return has_perm

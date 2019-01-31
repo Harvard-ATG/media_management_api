@@ -30,7 +30,7 @@ class CourseAdmin(admin.ModelAdmin):
     inlines = (CollectionsInline,)
 
 class CourseUserAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user_profile', 'is_admin')
+    list_display = ('id', 'course', 'user_profile', 'is_admin')
 
 class CollectionAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'course', 'sort_order')

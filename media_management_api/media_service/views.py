@@ -9,9 +9,8 @@ from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
-from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
-from media_management_api.media_auth.permissions import IsCourseUserAuthenticated, CollectionEndpointPermission, ResourceEndpointPermission
-
+from .filters import IsCourseUserFilterBackend
+from .permissions import IsCourseUserAuthenticated
 from .models import Course, Collection, Resource, CollectionResource, CourseCopy
 from .mediastore import processFileUploads, processRemoteImages
 from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CourseCopySerializer
@@ -73,14 +72,15 @@ it to a course instance in this repository.
     queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources', 'resources__media_store')
     serializer_class = CourseSerializer
     permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
 
     def get_queryset(self):
         queryset = super(CourseViewSet, self).get_queryset()
-        return queryset
+        return self.filter_queryset(queryset)
+
 
     def list(self, request, format=None):
         queryset = self.get_queryset()
-        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
 
         # Filter by LTI context
         if 'lti_context_id' in self.request.GET:
@@ -129,7 +129,6 @@ Methods
 
     def get(self, request, format=None):
         queryset = self.get_queryset()
-        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
         if 'q' not in self.request.GET:
             return Response([])
         searchtext = self.request.GET['q']
@@ -247,22 +246,25 @@ Methods
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (CollectionEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
 
     def get_queryset(self):
         queryset = super(CollectionViewSet, self).get_queryset()
-        queryset = CollectionEndpointFilter(self).filter_queryset(queryset)
-        return queryset
+        return self.filter_queryset(queryset)
+
+    def check_object_permissions(self, request, obj):
+        super(CollectionViewSet, self).check_object_permissions(request, obj.course)
 
     def list(self, request, format=None):
-        collections = self.get_queryset()
-        serializer = self.get_serializer(collections, many=True, context={'request': request})
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
         collection = self.get_object()
-        include = ['images']
-        serializer = self.get_serializer(collection, context={'request': request}, include=include)
+        serializer = self.get_serializer(collection, many=False, context={'request': request}, include=['images'])
         return Response(serializer.data)
 
 
@@ -318,21 +320,24 @@ Provide an array of items, which are just collection objects:
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
     permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CourseCollectionsView, self).get_queryset()
+        return self.filter_queryset(queryset)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        course = get_object_or_404(Course, pk=pk)
-        self.check_object_permissions(request, course)
-
-        collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
-        include = ['images']
-        serializer = self.get_serializer(collections, many=True, context={'request': request}, include=include)
+        queryset = self.get_queryset()
+        queryset = queryset.filter(course__pk=course_pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request}, include=['images'])
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
         course_pk = pk
         data = request.data.copy()
-        course = get_object_or_404(Course, pk=pk)
+        course = get_object_or_404(Course, pk=course_pk)
         self.check_object_permissions(request, course)
 
         data['course_id'] = course.pk
@@ -422,14 +427,18 @@ Methods
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
     permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CourseImagesListView, self).get_queryset()
+        return self.filter_queryset(queryset)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        course = get_object_or_404(Course, pk=course_pk)
-        self.check_object_permissions(request, course)
-
-        images = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
-        serializer = self.get_serializer(images, many=True, context={'request': request})
+        queryset = self.get_queryset()
+        queryset = queryset.filter(course__pk=course_pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
@@ -527,10 +536,17 @@ Methods
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "collection__course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CollectionImagesListView, self).get_queryset()
+        return self.filter_queryset(queryset)
 
     def get(self, request, pk=None, format=None):
-        collection_resources = self.get_queryset().filter(collection__pk=pk).order_by('sort_order')
-        serializer = self.get_serializer(collection_resources, many=True, context={'request': request})
+        queryset = self.get_queryset()
+        queryset = queryset.filter(collection__pk=pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
@@ -566,6 +582,15 @@ Methods
     queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
     permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "collection__course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CollectionImagesDetailView, self).get_queryset()
+        return self.filter_queryset(queryset)
+
+    def check_object_permissions(self, request, obj):
+        return super(CollectionImagesDetailView, self).check_object_permissions(request, obj.collection.course)
 
     def get(self, request, pk=None, format=None):
          collection_resource = self.get_object()
@@ -574,8 +599,6 @@ Methods
 
     def delete(self, request, pk=None, format=None):
         collection_resource = self.get_object()
-        self.check_object_permissions(request, collection_resource.collection.course)
-
         collection_resource.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -597,9 +620,13 @@ Methods
     '''
     queryset = Resource.objects.select_related('course', 'media_store')
     serializer_class = ResourceSerializer
-    permission_classes = (ResourceEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
 
     def get_queryset(self):
         queryset = super(CourseImageViewSet, self).get_queryset()
-        queryset = ResourceEndpointFilter(self).filter_queryset(queryset)
-        return queryset
+        return self.filter_queryset(queryset)
+
+    def check_object_permissions(self, request, obj):
+        super(CollectionViewSet, self).check_object_permissions(request, obj.course)
