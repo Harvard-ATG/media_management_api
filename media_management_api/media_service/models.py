@@ -110,7 +110,7 @@ class UserProfile(BaseModel):
     sis_user_id = models.CharField(max_length=60, unique=True, blank=True, null=True)
 
     @classmethod
-    def get_or_create_profile(cls, sis_user_id):
+    def get_or_create_profile(cls, sis_user_id=None):
         user_profiles = cls.objects.filter(sis_user_id=sis_user_id)
         user_profile = None
         if len(user_profiles) == 0:

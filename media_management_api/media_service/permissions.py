@@ -8,12 +8,27 @@ SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
 
 class IsCourseUserAuthenticated(BasePermission):
     def has_permission(self, request, view):
-        '''Returns True if the user is authenticated, otherwise False.'''
+        '''
+        This is generally called by the check_permissions() method on an APIView to determine
+        if a request should be permitted. It is called after authentication, but prior to invoking
+        the method on the view.
+
+        Returns True if the user is authenticated, otherwise False.
+        '''
         has_perm = bool(request.user and request.user.is_authenticated)
         logger.debug("user %s has_permission for request %s %s => %s" % (request.user.id if request.user else None, request.method, request.path, has_perm))
         return has_perm
 
     def has_object_permission(self, request, view, object):
+        '''
+        This is generally called by the check_object_permissions() method on an APIView to determine
+        if the request should be permitted for a given object.
+
+        Note that this is not called automatically, unless the view is a GenericAPIView
+        and the get_object() method is used.
+
+        Returns True if the user has permission to modify the object, otherwise returns False.
+        '''
         has_perm = self._has_object_permission(request, view, object)
         logger.debug("user %s has_object_permission for request %s %s => %s" % (request.user.id, request.method, request.path, has_perm))
         return has_perm
