@@ -176,17 +176,24 @@ the primary key of the course being copied.
         The assumption is that a course should only be copied once into the target.
         '''
         dest_pk = pk
-        course = get_object_or_404(Course, pk=pk)
-        self.check_object_permissions(request, course)
 
         if 'copy_source_id' not in request.data or not request.data['copy_source_id']:
             raise exceptions.ValidationError("Must provide 'copy_source_id' to identify the course to copy.", 400)
         source_id = str(request.data['copy_source_id'])
         if source_id == pk:
             raise exceptions.ValidationError("Cannot copy self", 400)
+
+        # Ensure that both courses exist
+        dest_course = get_object_or_404(Course, pk=dest_pk)
+        source_course = get_object_or_404(Course, pk=source_id)
+
+        # Check permissions on source and destination courses
+        self.check_object_permissions(request, dest_course)
+        self.check_object_permissions(request, source_course)
+
         status = 200
         result = {}
-        copy_qs = self.get_queryset().filter(dest_id=dest_pk, source_id=source_id)
+        copy_qs = self.get_queryset().filter(dest=dest_course, source=source_course)
         if copy_qs.exists():
             course_copy = copy_qs[0]
             result["data"] = self.get_serializer(course_copy, context={'request': request}).data
@@ -196,20 +203,16 @@ the primary key of the course being copied.
                 result["message"] = "Copy already completed"
             elif course_copy.state == CourseCopy.STATE_ERROR:
                 result["message"] = "Copy error"
+                result["error"] = "An error occurred with the copy process"
                 status = 500
             else:
                 result["message"] = "Copy state unknown"
+                result["error"] = result["message"]
                 status = 500
         else:
-            try:
-                course = Course.objects.get(pk=source_id)
-                course_copy = course.copy(dest_pk)
-                result["message"] = "Copy successful"
-                result["data"] = self.get_serializer(course_copy, context={'request': request}).data
-            except Course.DoesNotExist:
-                result["message"] = "Copy error"
-                result["error"] = "Course %s not found" % source_id
-                status = 404
+            course_copy = source_course.copy(dest_course)
+            result["message"] = "Copy successful"
+            result["data"] = self.get_serializer(course_copy, context={'request': request}).data
         return Response(result, status=status)
 
     def delete(self, request, pk, format=None):

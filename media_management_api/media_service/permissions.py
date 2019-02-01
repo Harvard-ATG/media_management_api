@@ -16,7 +16,7 @@ class IsCourseUserAuthenticated(BasePermission):
         Returns True if the user is authenticated, otherwise False.
         '''
         has_perm = bool(request.user and request.user.is_authenticated)
-        logger.debug("user %s has_permission for request %s %s => %s" % (request.user.id if request.user else None, request.method, request.path, has_perm))
+        logger.info("user %s has_permission for request [%s %s] => %s" % (request.user.id if request.user else None, request.method, request.path, has_perm))
         return has_perm
 
     def has_object_permission(self, request, view, object):
@@ -30,7 +30,7 @@ class IsCourseUserAuthenticated(BasePermission):
         Returns True if the user has permission to modify the object, otherwise returns False.
         '''
         has_perm = self._has_object_permission(request, view, object)
-        logger.debug("user %s has_object_permission for request %s %s => %s" % (request.user.id, request.method, request.path, has_perm))
+        logger.info("user %s has_object_permission for object [%s] request [%s %s] => %s" % (request.user.id, object, request.method, request.path, has_perm))
         return has_perm
 
     def _has_object_permission(self, request, view, object):

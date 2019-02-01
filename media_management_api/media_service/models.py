@@ -147,18 +147,17 @@ class Course(BaseModel):
         ordering = ["title"]
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
-    def copy(self, dest_course_pk):
+    def copy(self, dest_course):
         copy_data = {
             "total": 0,
             "resources": {},
             "collections": {},
             "collection_resources": {},
         }
-        dest_course = Course.objects.get(pk=dest_course_pk)
         course_copy = CourseCopy(source=self, dest=dest_course)
         course_copy.initiate()
 
-        logger.info("Copy %d started from course %s to %s" % (course_copy.pk, self.pk, dest_course_pk))
+        logger.info("Copy %d started from course %s to %s" % (course_copy.pk, self.pk, dest_course.pk))
         try:
             with transaction.atomic():
                 # Copy collections from the course
