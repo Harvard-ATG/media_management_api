@@ -157,30 +157,29 @@ class TestCourseUser(unittest.TestCase):
 
 class TestCourseCopy(unittest.TestCase):
     def setUp(self):
-        self.courses = []
-        for n in range(2):
-            course = models.Course(title="TestCourse%d" % n)
-            course.save()
-            self.courses.append(course)
+        self.source_course = models.Course(title="TestCourse1")
+        self.source_course.save()
+        self.dest_course = models.Course(title="TestCourse2")
+        self.dest_course.save()
 
     def tearDown(self):
-        for c in self.courses:
-            c.delete()
+        self.source_course.delete()
+        self.dest_course.delete()
 
     def test_initiate(self):
-        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy = models.CourseCopy(source=self.source_course, dest=self.dest_course)
         course_copy.initiate()
         self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
 
     def test_complete(self):
-        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy = models.CourseCopy(source=self.source_course, dest=self.dest_course)
         course_copy.save()
         self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
         course_copy.complete()
         self.assertEqual(models.CourseCopy.STATE_COMPLETED, course_copy.state)
 
     def test_complete_with_data(self):
-        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy = models.CourseCopy(source=self.source_course, dest=self.dest_course)
         course_copy.save()
         self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
         course_copy.complete()
@@ -195,7 +194,7 @@ class TestCourseCopy(unittest.TestCase):
         self.assertEqual(data, course_copy.loadData())
 
     def test_error(self):
-        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy = models.CourseCopy(source=self.source_course, dest=self.dest_course)
         course_copy.save()
         self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
         error_msg = "failure"
@@ -204,18 +203,63 @@ class TestCourseCopy(unittest.TestCase):
         self.assertEqual(error_msg, course_copy.error)
 
     def test_load_data(self):
-        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy = models.CourseCopy(source=self.source_course, dest=self.dest_course)
         course_copy.save()
         self.assertEqual('{}', course_copy.data)
         data = course_copy.loadData()
         self.assertIsInstance(data, dict)
 
     def test_update_data(self):
-        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy = models.CourseCopy(source=self.source_course, dest=self.dest_course)
         course_copy.save()
         self.assertEqual('{}', course_copy.data)
         newdata = {"foo":"bar"}
         course_copy.updateData(newdata)
         self.assertEqual(newdata, course_copy.loadData())
 
+    def test_copy(self):
+        # Setup the course resources to copy
+        resources = []
+        for n in range(3):
+            r = models.Resource(course=self.source_course, title="TestImage%d" % n)
+            r.save()
+            resources.append(r)
+
+        collections = []
+        for n in range(3):
+            c = models.Collection(course=self.source_course, title="TestCollection%d" % n)
+            c.save()
+            collections.append(c)
+
+        collection_resources = []
+        for r in resources:
+            cr = models.CollectionResource(collection=collections[0], resource=r)
+            cr.save()
+            collection_resources.append(cr)
+
+        # Perform the copy
+        course_copy = self.source_course.copy(self.dest_course)
+        self.assertEqual(models.CourseCopy.STATE_COMPLETED, course_copy.state)
+
+        # Check the data from the copy
+        data = course_copy.loadData()
+        self.assertTrue(data is not None)
+        for field in ("total", "resources", "collections", "collection_resources"):
+            self.assertIn(field, data)
+
+        self.assertEqual(len(resources) + len(collections) + len(collection_resources), data["total"])
+        for c in collections:
+            self.assertIn(str(c.pk), data["collections"])
+        for src_pk, dest_pk in data["collections"].items():
+            self.assertNotEqual(src_pk, dest_pk)
+
+        for r in resources:
+            self.assertIn(str(r.pk), data["resources"])
+        for src_pk, dest_pk in data["resources"].items():
+            self.assertNotEqual(src_pk, dest_pk)
+
+        for cr in collection_resources:
+            self.assertIn(str(cr.pk), data["collection_resources"])
+        for src_pk, dest_pk in data["collection_resources"].items():
+            self.assertNotEqual(src_pk, dest_pk)
 

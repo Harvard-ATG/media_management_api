@@ -148,6 +148,12 @@ class Course(BaseModel):
         unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
 
     def copy(self, dest_course):
+        '''
+        Copies all of the collections and resources from this course to a destination course.
+
+        :param dest_course: destination course
+        :return: a CourseCopy instance
+        '''
         copy_data = {
             "total": 0,
             "resources": {},
