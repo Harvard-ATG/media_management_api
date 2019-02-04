@@ -295,3 +295,9 @@ class CourseCopySerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseCopy
         fields = ('id', 'source', 'dest', 'state', 'error', 'data', 'created', 'updated')
+
+    def to_representation(self, instance):
+        data = super(CourseCopySerializer, self).to_representation(instance)
+        data['type'] = 'coursecopy'
+        data['data'] = instance.loadData()
+        return data

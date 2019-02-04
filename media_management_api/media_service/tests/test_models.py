@@ -153,3 +153,69 @@ class TestCourseUser(unittest.TestCase):
         self.assertEqual(user_profile.pk, course_user.user_profile.pk)
         self.assertEqual(self.courses[0].pk, course_user.course.pk)
         self.assertTrue(course_user.is_admin)
+
+
+class TestCourseCopy(unittest.TestCase):
+    def setUp(self):
+        self.courses = []
+        for n in range(2):
+            course = models.Course(title="TestCourse%d" % n)
+            course.save()
+            self.courses.append(course)
+
+    def tearDown(self):
+        for c in self.courses:
+            c.delete()
+
+    def test_initiate(self):
+        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy.initiate()
+        self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
+
+    def test_complete(self):
+        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy.save()
+        self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
+        course_copy.complete()
+        self.assertEqual(models.CourseCopy.STATE_COMPLETED, course_copy.state)
+
+    def test_complete_with_data(self):
+        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy.save()
+        self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
+        course_copy.complete()
+        data = {
+            "total": 0,
+            "resources": {},
+            "collections": {},
+            "collection_resources": {},
+        }
+        course_copy.complete(data)
+        self.assertEqual(models.CourseCopy.STATE_COMPLETED, course_copy.state)
+        self.assertEqual(data, course_copy.loadData())
+
+    def test_error(self):
+        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy.save()
+        self.assertEqual(models.CourseCopy.STATE_INITIATED, course_copy.state)
+        error_msg = "failure"
+        course_copy.fail(error_msg)
+        self.assertEqual(models.CourseCopy.STATE_ERROR, course_copy.state)
+        self.assertEqual(error_msg, course_copy.error)
+
+    def test_load_data(self):
+        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy.save()
+        self.assertEqual('{}', course_copy.data)
+        data = course_copy.loadData()
+        self.assertIsInstance(data, dict)
+
+    def test_update_data(self):
+        course_copy = models.CourseCopy(source=self.courses[0], dest=self.courses[1])
+        course_copy.save()
+        self.assertEqual('{}', course_copy.data)
+        newdata = {"foo":"bar"}
+        course_copy.updateData(newdata)
+        self.assertEqual(newdata, course_copy.loadData())
+
+

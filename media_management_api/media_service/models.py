@@ -429,7 +429,7 @@ class CourseCopy(BaseModel):
     dest = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='dest_copies')
     state = models.CharField(max_length=100, choices=STATE_CHOICES, default=STATE_INITIATED)
     error = models.TextField()
-    data = JSONField(default='{}')
+    data = models.TextField(blank=True, default='{}')
 
     class Meta:
         verbose_name = 'course copy'
@@ -439,14 +439,14 @@ class CourseCopy(BaseModel):
     def initiate(self, data=None):
         self.state = self.STATE_INITIATED
         if data is not None:
-            self.data = data
+            self.data = json.dumps(data)
         self.save()
         return self
 
     def complete(self, data=None):
         self.state = self.STATE_COMPLETED
         if data is not None:
-            self.data = data
+            self.data = json.dumps(data)
         self.save()
         return self
 
@@ -456,10 +456,16 @@ class CourseCopy(BaseModel):
         self.save()
         return self
 
-    def saveData(self, data):
-        self.data = data
+    def updateData(self, data):
+        self.data = json.dumps(data)
         self.save(update_fields=['data', 'updated'])
         return self
+
+    def loadData(self):
+        try:
+            return json.loads(self.data)
+        except:
+            return {}
 
     def __unicode__(self):
         return u'CourseCopy:%s' % (self.id)
