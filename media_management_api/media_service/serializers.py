@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers, exceptions
 from rest_framework.reverse import reverse
-from .models import Course, Collection, CollectionResource, Resource
+from .models import Course, Collection, CollectionResource, Resource, CourseCopy
 from . import mediastore
 import json
 
@@ -262,6 +262,7 @@ class ResourceSerializer(serializers.HyperlinkedModelSerializer):
         data.update(resource_to_representation(instance))
         return data
 
+
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="api:course-detail", lookup_field="pk")
     collections_url = serializers.HyperlinkedIdentityField(view_name="api:course-collections", lookup_field="pk")
@@ -269,7 +270,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Course
-        fields = ('url', 'id', 'title', 'collections_url', 'images_url', 'lti_context_id', 'lti_tool_consumer_instance_guid', 'created', 'updated')
+        fields = ( 'id', 'title', 'sis_course_id', 'canvas_course_id', 'lti_context_id', 'lti_context_title', 'lti_context_label', 'lti_tool_consumer_instance_guid', 'lti_tool_consumer_instance_name', 'created', 'updated', 'url', 'collections_url', 'images_url')
 
     def __init__(self, *args, **kwargs):
         include = kwargs.pop('include', [])
@@ -283,4 +284,20 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
     def to_representation(self, instance):
         data = super(CourseSerializer, self).to_representation(instance)
         data['type'] = 'courses'
+        return data
+
+
+class CourseCopySerializer(serializers.ModelSerializer):
+    data = serializers.JSONField()
+    source = CourseSerializer()
+    dest = CourseSerializer()
+
+    class Meta:
+        model = CourseCopy
+        fields = ('id', 'source', 'dest', 'state', 'error', 'data', 'created', 'updated')
+
+    def to_representation(self, instance):
+        data = super(CourseCopySerializer, self).to_representation(instance)
+        data['type'] = 'coursecopy'
+        data['data'] = instance.loadData()
         return data

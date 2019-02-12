@@ -3,10 +3,11 @@
   "model": "media_service.course",
   "pk": 1,
   "fields": {
-    "title": "Arthur's Demo Course",
+    "title": "Arthur's Demo Course Fall Semester",
     "lti_context_id": "2a8b2d3fa51ea413d19e480fb6c2eb085b7866a9",
     "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
     "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
+    "sis_course_id": "acts-demo-001",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -14,10 +15,11 @@
   "model": "media_service.course",
   "pk": 2,
   "fields": {
-    "title": "Jazahn's Demo Course",
+    "title": "Arthur's Demo Course Spring Semester",
     "lti_context_id": "01cc622dbb0d57a76ea5f0caa20a63cf8685e1ef",
     "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
     "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
+    "sis_course_id": "acts-demo-002",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -29,6 +31,7 @@
     "lti_context_id": "0f51be9dd2bf866dfbccbc0aa420e57027c63608",
     "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
     "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
+    "sis_course_id": "acts-demo-003",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -40,6 +43,7 @@
     "lti_context_id": "e74c7d920cb4b86aa56138de490abc6c17583460",
     "lti_tool_consumer_instance_guid": "d886f46d7655008ef2216e9e19ed93d0.canvas.localhost",
     "lti_tool_consumer_instance_name": "Canvas Localhost Instance",
+    "sis_course_id": "acts-demo-004",
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }
@@ -213,6 +217,69 @@
   "fields": {
     "collection": 3,
     "resource": 4,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.userprofile",
+  "pk": 1,
+  "fields": {
+    "user": null,
+    "sis_user_id": "testuser001",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.userprofile",
+  "pk": 2,
+  "fields": {
+    "user": null,
+    "sis_user_id": "testuser002",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.userprofile",
+  "pk": 3,
+  "fields": {
+    "user": null,
+    "sis_user_id": "testuser003",
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseuser",
+  "pk": 2,
+  "fields": {
+    "course": 1,
+    "user_profile": 1,
+    "is_admin": true,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseuser",
+  "pk": 2,
+  "fields": {
+    "course": 2,
+    "user_profile": 1,
+    "is_admin": true,
+    "created": "2015-12-15T15:42:33.443434Z",
+    "updated": "2015-12-15T15:42:33.443434Z"
+  }
+},
+{
+  "model": "media_service.courseuser",
+  "pk": 2,
+  "fields": {
+    "course": 3,
+    "user_profile": 1,
+    "is_admin": false,
     "created": "2015-12-15T15:42:33.443434Z",
     "updated": "2015-12-15T15:42:33.443434Z"
   }

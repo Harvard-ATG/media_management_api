@@ -198,42 +198,27 @@ LOGGING = {
             'formatter': 'simple'
         },
     },
-    # This is the default logger for any apps or libraries that use the logger
-    # package, but are not represented in the `loggers` dict below.  A level
-    # must be set and handlers defined.  Setting this logger is equivalent to
-    # setting and empty string logger in the loggers dict below, but the separation
-    # here is a bit more explicit.  See link for more details:
-    # https://docs.python.org/2.7/library/logging.config.html#dictionary-schema-details
-    'root': {
-        'level': logging.DEBUG,
-        'handlers': ['default'],
-    },
     'loggers': {
+        # Root logger
+        '': {
+            'level': 'WARNING',
+            'handlers': ['default', 'console'],
+        },
         # Add app or module specific loggers here.
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'default'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'django.db': {
-            'handlers': ['console'],
+            'handlers': ['console', 'default'],
             'level': 'INFO', # Set to DEBUG to see SQL output
-            'propagate': True,
+            'propagate': False,
         },
         'media_management_api': {
-            'handlers': ['console'],
+            'handlers': ['console', 'default'],
             'level': 'DEBUG',
-            'propagate': True,
-        },
-        'media_service': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'media_auth': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }

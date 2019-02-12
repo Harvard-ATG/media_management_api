@@ -1,19 +1,24 @@
 import unittest
-import random
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
 from ..models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
 
-class TestCourseEndpoint(APITestCase):
+class BaseApiTestCase(APITestCase):
+    def _create_test_superuser(self):
+        user_profile = UserProfile.get_or_create_profile("SuperUserTest")
+        superuser = user_profile.user
+        superuser.is_superuser = True
+        superuser.save()
+        return superuser
+
+class TestCourseEndpoint(BaseApiTestCase):
     fixtures = ['test.json']
 
     def setUp(self):
-        self.credentials = {"username": "testuser", "password": "testuser"}
-        self.testuser = User.objects.create(username=self.credentials['username'])
-        self.testuser.set_password(self.credentials['password'])
-        self.client.force_authenticate(self.testuser)
+        self.superuser = self._create_test_superuser()
+        self.client.force_authenticate(self.superuser)
 
     def get_example_item(self, detail=False):
         example_item = {
@@ -24,6 +29,11 @@ class TestCourseEndpoint(APITestCase):
             "images_url": "http://localhost:8000/courses/1/images",
             "lti_context_id": "asdf",
             "lti_tool_consumer_instance_guid": "asdf.canvas.localhost",
+            "lti_tool_consumer_instance_name": "Localhost Instance",
+            "lti_context_label": "Test",
+            "lti_context_title": "Test",
+            "sis_course_id": "sis123",
+            "canvas_course_id": "canvas123",
             "created": "2015-12-15T15:42:33.443434Z",
             "updated": "2015-12-15T15:42:33.443434Z",
             "type": "courses",
@@ -85,7 +95,6 @@ class TestCourseEndpoint(APITestCase):
     def test_course_list(self):
         courses = Course.objects.all()
         url = reverse('api:course-list')
-        self.client.login(username=self.credentials['username'], password=self.credentials['password'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), len(courses))
@@ -232,14 +241,12 @@ class TestCourseEndpoint(APITestCase):
                 response = self.client.put(url, data)
                 self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class TestCollectionEndpoint(APITestCase):
+class TestCollectionEndpoint(BaseApiTestCase):
     fixtures = ['test.json']
 
     def setUp(self):
-        self.credentials = {"username": "testuser", "password": "testuser"}
-        self.testuser = User.objects.create(username=self.credentials['username'])
-        self.testuser.set_password(self.credentials['password'])
-        self.client.force_authenticate(self.testuser)
+        self.superuser = self._create_test_superuser()
+        self.client.force_authenticate(self.superuser)
 
     def test_collection_list(self):
         collections = Collection.objects.all()

@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 from rest_framework import viewsets, status, exceptions
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -8,12 +9,11 @@ from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
-from media_management_api.media_auth.filters import CourseEndpointFilter, CollectionEndpointFilter, ResourceEndpointFilter
-from media_management_api.media_auth.permissions import CourseEndpointPermission, CollectionEndpointPermission, ResourceEndpointPermission, CollectionResourceEndpointPermission
-
-from .models import Course, Collection, Resource, MediaStore, CollectionResource
+from .filters import IsCourseUserFilterBackend
+from .permissions import IsCourseUserAuthenticated
+from .models import Course, Collection, Resource, CollectionResource, CourseCopy
 from .mediastore import processFileUploads, processRemoteImages
-from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer
+from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CourseCopySerializer
 
 import logging
 
@@ -36,44 +36,67 @@ Courses Endpoints
 ----------------
 
 - `/courses`  Lists courses
+- `/courses/search?q=title|sis_course_id` Search courses
 - `/courses/{pk}` Course detail
+- `/courses/{pk}/course_copy` Lists a course's copy records
 - `/courses/{pk}/collections` Lists a course's collections
 - `/courses/{pk}/images`  Lists a course's images
 
-LTI Attributes
---------------
-A course associated with an LTI context must have the following attributes at minimum:
+Querying the list of courses
+----------------------------
+
+The following query parameters can be used to query the list of courses:
+
+- lti_context_id
+- lti_tool_consumer_instance_guid
+- sis_course_id
+- title
+
+Examples:
+
+- `/courses?lti_context_id=<context_id>&lti_tool_consumer_instance_guid=<tool_consumer_instance_guid>`
+- `/courses?sis_course_id=<SIS_ID>`
+- `/courses?title=<TITLE>`
+
+Note on LTI Attributes:
+-----------------------
+
+A course associated with an LTI context should have the following attributes:
 
 - `lti_context_id` Opaque identifier that uniquely identifies tool context (i.e. Canvas Course)
 - `lti_tool_consumer_instance_guid` DNS of the consumer instance that launched the tool
 
-Together, these two attributes should be unique. These attributes should be present in an
-LTI launch as `context_id` and `tool_consumer_instance_guid`.
-
-To search for a course associated with an LTI context:
-
-- `/courses?lti_context_id=<context_id>&lti_tool_consumer_instance_guid=<tool_consumer_instance_guid>`
-
-Since one and only one instance of a course can exist with those two attributes, the response should
-be an empty list or a list with one object.
+Together, these two attributes should be enough to uniquely identify the course instance on the target platform and link
+it to a course instance in this repository.
     '''
     queryset = Course.objects.prefetch_related('resources', 'collections', 'collections__resources', 'resources__media_store')
     serializer_class = CourseSerializer
-    permission_classes = (CourseEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
 
     def get_queryset(self):
         queryset = super(CourseViewSet, self).get_queryset()
-        queryset = CourseEndpointFilter(self).filter_queryset(queryset)
-        return queryset
+        return self.filter_queryset(queryset)
+
 
     def list(self, request, format=None):
         queryset = self.get_queryset()
 
-        # Filter queryset by LTI context params
-        lti_params = ('lti_context_id', 'lti_tool_consumer_instance_guid')
-        lti_filters = dict([(k, self.request.GET[k]) for k in lti_params if k in self.request.GET])
-        if len(lti_filters.keys()) > 0:
-            queryset = queryset.filter(**lti_filters)
+        # Filter by LTI context
+        if 'lti_context_id' in self.request.GET:
+            queryset = queryset.filter(lti_context_id=self.request.GET['lti_context_id'])
+        if 'lti_tool_consumer_instance_guid' in self.request.GET:
+            queryset = queryset.filter(lti_tool_consumer_instance_guid=self.request.GET['lti_tool_consumer_instance_guid'])
+
+        # Filter by Canvas course ID
+        if 'canvas_course_id' in self.request.GET:
+            queryset = queryset.filter(canvas_course_id=self.request.GET['canvas_course_id'])
+
+        # Filter by title or SIS ID
+        if 'title' in self.request.GET:
+            queryset = queryset.filter(title=self.request.GET['title'])
+        if 'sis_course_id' in self.request.GET:
+            queryset = queryset.filter(sis_course_id=self.request.GET['sis_course_id'])
 
         serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
@@ -83,6 +106,125 @@ be an empty list or a list with one object.
         include = ['images', 'collections']
         serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
+
+class CourseSearchView(GenericAPIView):
+
+    '''
+Search courses by title or SIS ID.
+
+Endpoints
+---------
+
+- `/courses/search`
+
+Methods
+-------
+
+- `GET /courses/search?q=title|sis_course_id`
+
+    '''
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        queryset = self.get_queryset()
+        if 'q' not in self.request.GET:
+            return Response([])
+        searchtext = self.request.GET['q']
+        queryset = queryset.filter(Q(title__startswith=searchtext) | Q(sis_course_id__startswith=searchtext))
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
+class CourseCopyView(GenericAPIView):
+    '''
+A **course copy** resource is used tocopy of another course's collections and image resources.
+
+Endpoints
+---------
+
+- `/courses/<pk>/course_copy`
+
+Methods
+-------
+
+- `GET /courses/<pk>/course_copy` List record of course copies
+- `POST /courses/<pk>/course_copy` Request a copy of the specified course
+- `DELETE /courses/<pk>/course_copy` Clears copy records
+
+You must specify `{source_id: "<pk>"}` when submitting a POST request. The value of the `source_id` should be
+the primary key of the course being copied.
+    '''
+    queryset = CourseCopy.objects.all()
+    serializer_class = CourseCopySerializer
+    permission_classes = (IsCourseUserAuthenticated,)
+
+    def get(self, request, pk, format=None):
+        course_pk = pk
+        copy_qs = self.get_queryset().filter(dest_id=course_pk)
+        if 'source_id' in request.GET:
+            copy_qs = copy_qs.filter(source_id=request.GET['source_id'])
+        if 'state' in request.GET:
+            copy_qs = copy_qs.filter(state=request.GET['state'])
+        serializer = self.get_serializer(copy_qs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, pk, format=None):
+        '''
+        Initiates a copy if one does not already exist for the src/dest combination.
+        The assumption is that a course should only be copied once into the target.
+        '''
+        dest_pk = pk
+
+        if 'copy_source_id' not in request.data or not request.data['copy_source_id']:
+            raise exceptions.ValidationError("Must provide 'copy_source_id' to identify the course to copy.", 400)
+        source_id = str(request.data['copy_source_id'])
+        if source_id == pk:
+            raise exceptions.ValidationError("Cannot copy self", 400)
+
+        # Ensure that both courses exist
+        dest_course = get_object_or_404(Course, pk=dest_pk)
+        source_course = get_object_or_404(Course, pk=source_id)
+
+        # Check permissions on source and destination courses
+        self.check_object_permissions(request, dest_course)
+        self.check_object_permissions(request, source_course)
+
+        status = 200
+        result = {}
+        copy_qs = self.get_queryset().filter(dest=dest_course, source=source_course)
+        if copy_qs.exists():
+            course_copy = copy_qs[0]
+            result["data"] = self.get_serializer(course_copy, context={'request': request}).data
+            if course_copy.state == CourseCopy.STATE_INITIATED:
+                result["message"] = "Copy already initiated"
+            elif course_copy.state == CourseCopy.STATE_COMPLETED:
+                result["message"] = "Copy already completed"
+            elif course_copy.state == CourseCopy.STATE_ERROR:
+                result["message"] = "Copy error"
+                result["error"] = "An error occurred with the copy process"
+                status = 500
+            else:
+                result["message"] = "Copy state unknown"
+                result["error"] = result["message"]
+                status = 500
+        else:
+            course_copy = source_course.copy(dest_course)
+            result["message"] = "Copy successful"
+            result["data"] = self.get_serializer(course_copy, context={'request': request}).data
+        return Response(result, status=status)
+
+    def delete(self, request, pk, format=None):
+        course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
+        result = self.get_queryset().filter(dest_id=course_pk).delete()
+        num_deleted = result[0]
+        msg = "Deleted %s copy records in course %s" % (num_deleted, course_pk)
+        logger.info(msg)
+        return Response({"message": msg})
 
 
 class CollectionViewSet(viewsets.ModelViewSet):
@@ -98,32 +240,36 @@ Endpoints
 Methods
 -------
 
-- `get /collections`  Lists collections
-- `post /collections` Creates new collection
-- `get /collections/{pk}` Retrieves collection details
-- `put /collections/{pk}` Updates collection
-- `delete /collections/{pk}` Deletes a collection
-- `get /collections/{pk}/images`  Lists a collection's images
+- `GET /collections`  Lists collections
+- `POST /collections` Creates new collection
+- `GET /collections/{pk}` Retrieves collection details
+- `PUT /collections/{pk}` Updates collection
+- `DELETE /collections/{pk}` Deletes a collection
+- `GET /collections/{pk}/images`  Lists a collection's images
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (CollectionEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
 
     def get_queryset(self):
         queryset = super(CollectionViewSet, self).get_queryset()
-        queryset = CollectionEndpointFilter(self).filter_queryset(queryset)
-        return queryset
+        return self.filter_queryset(queryset)
+
+    def check_object_permissions(self, request, obj):
+        super(CollectionViewSet, self).check_object_permissions(request, obj.course)
 
     def list(self, request, format=None):
-        collections = self.get_queryset()
-        serializer = self.get_serializer(collections, many=True, context={'request': request})
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None, format=None):
         collection = self.get_object()
-        include = ['images']
-        serializer = self.get_serializer(collection, context={'request': request}, include=include)
+        serializer = self.get_serializer(collection, many=False, context={'request': request}, include=['images'])
         return Response(serializer.data)
+
 
 class CourseCollectionsView(GenericAPIView):
     '''
@@ -140,6 +286,7 @@ Methods
 - `GET /courses/{pk}/collections`  Lists collections that belong to the course
 - `POST /courses/{pk}/collections` Creates a new collection and adds it to the course
 - `PUT /courses/{pk}/collections`  Updates collections
+- `DELETE /courses/{pk}/collections` Deletes collections
 
 Details
 -------
@@ -175,19 +322,27 @@ Provide an array of items, which are just collection objects:
     '''
     queryset = Collection.objects.select_related('course').prefetch_related('resources__resource__media_store')
     serializer_class = CollectionSerializer
-    permission_classes = (CollectionEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CourseCollectionsView, self).get_queryset()
+        return self.filter_queryset(queryset)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
-        include = ['images']
-        serializer = self.get_serializer(collections, many=True, context={'request': request}, include=include)
+        queryset = self.get_queryset()
+        queryset = queryset.filter(course__pk=course_pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request}, include=['images'])
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
         course_pk = pk
         data = request.data.copy()
-        course = get_object_or_404(Course, pk=pk)
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
         data['course_id'] = course.pk
         serializer = self.get_serializer(data=data, context={'request': request})
         if serializer.is_valid():
@@ -197,6 +352,9 @@ Provide an array of items, which are just collection objects:
 
     def put(self, request, pk=None, format=None):
         course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         collection_ids = [c.pk for c in collections]
         collection_map = dict([(c.pk, c) for c in collections])
@@ -239,6 +397,16 @@ Provide an array of items, which are just collection objects:
 
         raise exceptions.APIException("Must specify one of 'items' or 'sort_order' to update a batch of collections for course %s." % course_pk)
 
+    def delete(self, request, pk=None, format=None):
+        course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+        results = Collection.objects.filter(course_id=course_pk).delete()
+        num_deleted = results[0]
+        msg = "Deleted %s collections in course %s" % (num_deleted, course_pk)
+        logger.info(msg)
+        return Response({"message": msg})
+
 
 class CourseImagesListView(GenericAPIView):
     '''
@@ -253,24 +421,36 @@ Endpoints
 Methods
 -------
 
-- `get /courses/{pk}/images`  Lists images that belong to the course
-- `post /courses/{pk}/images` Uploads an image to the course
+- `GET /courses/{pk}/images`  Lists images that belong to the course
+- `POST /courses/{pk}/images` Uploads an image to the course
+- `DELETE /courses/{pk}/images` Deletes images that belong to the course
+
     '''
     serializer_class = ResourceSerializer
     queryset = Resource.objects.select_related('course', 'media_store')
     parser_classes = (JSONParser, MultiPartParser, FormParser)
-    permission_classes = (ResourceEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CourseImagesListView, self).get_queryset()
+        return self.filter_queryset(queryset)
 
     def get(self, request, pk=None, format=None):
         course_pk = pk
-        images = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
-        serializer = self.get_serializer(images, many=True, context={'request': request})
+        queryset = self.get_queryset()
+        queryset = queryset.filter(course__pk=course_pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
         logger.debug("request content_type=%s data=%s" % (request.content_type, request.data))
         request_data = request.data.copy()
-        course = get_object_or_404(Course, pk=pk)
+        course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
         request_data['course_id'] = course.pk
         files = []
         response_data = []
@@ -326,6 +506,21 @@ Methods
                 return Response(response_data + [serializer.errors], status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+    def delete(self, request, pk=None, format=None):
+        course_pk = pk
+        course = get_object_or_404(Course, pk=course_pk)
+        self.check_object_permissions(request, course)
+
+        resources = self.get_queryset().filter(course=course).order_by('sort_order')
+        num_deleted = 0
+        for resource in resources:
+            resource.delete() # calling manually because the instance delete() contains logic pertaining to the media store
+            num_deleted += 1
+        msg = "Deleted %s images in course %s" % (num_deleted, course_pk)
+        logger.info(msg)
+        return Response({"message": msg})
+
+
 class CollectionImagesListView(GenericAPIView):
     '''
 A **collection images** resource is a set of *images* that are associated with a *collection*.
@@ -338,20 +533,29 @@ Endpoints
 Methods
 -------
 
-- `get /courses/{pk}/images`  Lists images that belong to the course
-- `post /courses/{pk}/images` Adds images to the collection that already exist in the course library.
+- `GET /collections/{pk}/images`  Lists images that belong to the course
+- `POST /collections/{pk}/images` Adds images to the collection that already exist in the course library.
     '''
     queryset = CollectionResource.objects.select_related('collection', 'resource').prefetch_related('resource__media_store')
     serializer_class = CollectionResourceSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "collection__course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CollectionImagesListView, self).get_queryset()
+        return self.filter_queryset(queryset)
 
     def get(self, request, pk=None, format=None):
-        collection_resources = self.get_queryset().filter(collection__pk=pk).order_by('sort_order')
-        serializer = self.get_serializer(collection_resources, many=True, context={'request': request})
+        queryset = self.get_queryset()
+        queryset = queryset.filter(collection__pk=pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, pk=None, format=None):
         collection = get_object_or_404(Collection, pk=pk)
+        self.check_object_permissions(request, collection.course)
+
         data = []
         for collection_resource in request.data:
             collection_resource = collection_resource.copy()
@@ -375,12 +579,21 @@ Endpoints
 Methods
 -------
 
-- `get /collection-images/{pk}` Retrieves details of image associated with collection
-- `delete /collection-images/{pk}` Removes the image from the collection
+- `GET /collection-images/{pk}` Retrieves details of image associated with collection
+- `DELETE /collection-images/{pk}` Removes the image from the collection
     '''
     queryset = CollectionResource.objects.all()
     serializer_class = CollectionResourceSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "collection__course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CollectionImagesDetailView, self).get_queryset()
+        return self.filter_queryset(queryset)
+
+    def check_object_permissions(self, request, obj):
+        return super(CollectionImagesDetailView, self).check_object_permissions(request, obj.collection.course)
 
     def get(self, request, pk=None, format=None):
          collection_resource = self.get_object()
@@ -405,14 +618,18 @@ Endpoints
 Methods
 -------
 
-- `get /images`  Lists images
-- `get /images/{pk}` Retrieves details of an image
+- `GET /images`  Lists images
+- `GET /images/{pk}` Retrieves details of an image
     '''
     queryset = Resource.objects.select_related('course', 'media_store')
     serializer_class = ResourceSerializer
-    permission_classes = (ResourceEndpointPermission,)
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
 
     def get_queryset(self):
         queryset = super(CourseImageViewSet, self).get_queryset()
-        queryset = ResourceEndpointFilter(self).filter_queryset(queryset)
-        return queryset
+        return self.filter_queryset(queryset)
+
+    def check_object_permissions(self, request, obj):
+        super(CourseImageViewSet, self).check_object_permissions(request, obj.course)
