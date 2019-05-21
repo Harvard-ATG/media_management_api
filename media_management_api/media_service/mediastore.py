@@ -8,6 +8,7 @@ import requests
 import tempfile
 import urlparse
 import contextlib
+import PIL
 from django.conf import settings
 from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
