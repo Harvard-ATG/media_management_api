@@ -61,7 +61,7 @@ def fetchRemoteImage(url):
     '''
     extension = guessImageExtensionFromUrl(url)
     suffix = '' if extension is None else '.' + extension
-    max_size = 10 * pow(2, 20) # 10 megabytes
+    max_size = 50 * pow(2, 20) # 50 megabytes
     request_headers = {
         # Spoofing the user agent to work around image providers that reject requests from "robots" (403 forbidden response)
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
