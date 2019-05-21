@@ -37,6 +37,11 @@ VALID_IMAGE_EXT_FOR_TYPE = {
 }
 VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
 
+# Modify max image size that pillow will accept
+# Using the VisibleEarth High Resolution Map as a reference size (https://www.h-schmidt.net/map/)
+PIL.Image.MAX_IMAGE_PIXELS = 933120000 # E.g. 43200x21600
+
+
 class MediaStoreException(Exception):
     pass
 
@@ -262,7 +267,7 @@ class MediaStoreUpload:
         try:
             Image.open(self.file)
         except Exception as e:
-            errmsg = "Image cannot be opened or identified."
+            errmsg = "Image cannot be opened or identified:"
             self.error('open', errmsg)
             if self._raise_for_error:
                 raise MediaStoreException(errmsg)
