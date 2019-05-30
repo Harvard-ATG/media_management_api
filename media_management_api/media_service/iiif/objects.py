@@ -268,6 +268,7 @@ class IIIFImageResource(IIIFObject):
                 "@type": "dctypes:Image",
                 "service": {
                     "@id": self.image_url,
+                    "@context": "http://iiif.io/api/image/2/context.json",
                     "profile": "http://iiif.io/api/image/2/level1.json",
                 }
             }
