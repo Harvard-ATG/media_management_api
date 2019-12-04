@@ -1,6 +1,6 @@
 from django.conf.urls import url
 from rest_framework.urlpatterns import format_suffix_patterns
-import views
+from . import views
 
 urlpatterns = [
     url(r'^$', views.IiifView.as_view(), name="root"),

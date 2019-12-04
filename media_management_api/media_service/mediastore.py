@@ -6,7 +6,7 @@ import logging
 import zipfile
 import requests
 import tempfile
-import urlparse
+from urllib.parse import urlparse
 import contextlib
 import PIL
 from django.conf import settings
