@@ -52,7 +52,7 @@ def guessImageExtensionFromUrl(url):
     Returns None when no extension can be identified.
     '''
     extension = None
-    o = urlparse.urlparse(url)
+    o = urlparse(url)
     if '/' in o.path and len(o.path) > 1:
         name = o.path.split('/')[-1]
         if '.' in name:
@@ -364,7 +364,7 @@ class MediaStoreUpload:
         NOTE: there are *two* python libraries named "magic" so if this method is generating
         errors, it's possible that the other "magic" is installed on the system.
         '''
-        buf = self.file.chunks(1024).next()
+        buf = next(self.file.chunks(1024))
         file_type = magic.from_buffer(buf, mime=True)
         return file_type
 
