@@ -465,7 +465,7 @@ Methods
                 raise exceptions.APIException("Error: no files uploaded")
             logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
             processed_uploads = processFileUploads(request.FILES.getlist(file_param))
-            for index, f in processed_uploads.iteritems():
+            for index, f in processed_uploads.items():
                 data = request_data.copy()
                 logger.debug("Processing file upload: %s" % f.name)
                 serializer = self.get_serializer(data=data, context={'request': request}, is_upload=True, file_object=f)
@@ -486,7 +486,7 @@ Methods
             except Exception as e:
                 raise exceptions.APIException(str(e))
 
-            for url, item in processed_items.iteritems():
+            for url, item in processed_items.items():
                 f = item['file']
                 data = item['data'].copy()
                 data['course_id'] = course.pk

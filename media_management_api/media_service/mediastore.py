@@ -449,7 +449,7 @@ class MediaStoreUpload:
         Utility function to write the uploaded file contents to a given file name.
         '''
         file = self.file
-        with open(file_name, 'wb+') as dest:
+        with io.open(file_name, 'wb+') as dest:
             if file.multiple_chunks:
                 for c in file.chunks():
                     dest.write(c)
