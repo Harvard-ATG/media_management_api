@@ -24,7 +24,7 @@ def obtain_token(request):
 
     data = None
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body.decode('utf-8'))
         logger.debug("Request to obtain token given data: %s" % data)
     except Exception as e:
         errstr = "Error parsing request to obtain token: %s. Error: %s" % (request.body, str(e))
