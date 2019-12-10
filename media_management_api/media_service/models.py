@@ -3,7 +3,7 @@ from django.db.models import Max
 from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 from django.conf import settings
-import urllib
+from urllib.parse import quote
 import json
 import logging
 
@@ -55,7 +55,7 @@ class MediaStore(BaseModel):
     def _get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
         if encode:
-            identifier = urllib.quote(identifier, safe='') # Make sure "/" is percent-encoded too!
+            identifier = quote(identifier, safe='') # Make sure "/" is percent-encoded too!
         return identifier
 
     def get_iiif_base_url(self):

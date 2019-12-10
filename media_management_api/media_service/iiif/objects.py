@@ -67,7 +67,7 @@ class IIIFManifest(IIIFObject):
         {'id': 2, 'is_iiif': True, 'url': 'http://localhost:8000/loris/bar.jpg'}
     ])
     output = manifest.to_json()
-    print output
+    print(output)
     '''
 
     def __init__(self, request, manifest_id, **kwargs):

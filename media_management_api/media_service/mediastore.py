@@ -6,7 +6,7 @@ import logging
 import zipfile
 import requests
 import tempfile
-import urlparse
+from urllib.parse import urlparse
 import contextlib
 import PIL
 from django.conf import settings
@@ -52,7 +52,7 @@ def guessImageExtensionFromUrl(url):
     Returns None when no extension can be identified.
     '''
     extension = None
-    o = urlparse.urlparse(url)
+    o = urlparse(url)
     if '/' in o.path and len(o.path) > 1:
         name = o.path.split('/')[-1]
         if '.' in name:
@@ -364,7 +364,7 @@ class MediaStoreUpload:
         NOTE: there are *two* python libraries named "magic" so if this method is generating
         errors, it's possible that the other "magic" is installed on the system.
         '''
-        buf = self.file.chunks(1024).next()
+        buf = next(self.file.chunks(1024))
         file_type = magic.from_buffer(buf, mime=True)
         return file_type
 
@@ -449,7 +449,7 @@ class MediaStoreUpload:
         Utility function to write the uploaded file contents to a given file name.
         '''
         file = self.file
-        with open(file_name, 'wb+') as dest:
+        with io.open(file_name, 'wb+') as dest:
             if file.multiple_chunks:
                 for c in file.chunks():
                     dest.write(c)

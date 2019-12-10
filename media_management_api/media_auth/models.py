@@ -28,31 +28,51 @@ class Token(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="user_tokens")
     application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name='user_tokens')
-    
+
     class Meta:
         verbose_name = 'token'
         verbose_name_plural = 'tokens'
         ordering = ["-created"]
 
+def generate_random_client_secret():
+    '''
+    Returns a random hex string that can be used as the client secret.
+    '''
+    m = hashlib.sha1()
+    m.update(os.urandom(4096))
+    return m.hexdigest()
+
+def generate_random_access_token(pk):
+    '''
+    Returns a unique, non-guessable string that can be used as the access token.
+    '''
+    m = hashlib.sha1()
+    m.update(os.urandom(4096))
+
+    digest_encoded_bytes = base64.urlsafe_b64encode(m.digest())
+    pk_encoded_bytes = base64.urlsafe_b64encode(struct.pack('I', int(pk))) # ensure uniqueness
+    token = (digest_encoded_bytes + pk_encoded_bytes).strip(b"=\n").decode("utf-8")
+
+    return token
+
 def create_token_key(sender, instance, **kwargs):
+    '''
+    Sets an access token for new Token instances (called via post_save signal).
+    '''
     if not instance.key:
-        m = hashlib.sha1()
-        m.update(os.urandom(4096))
-        digest_encoded = base64.urlsafe_b64encode(m.digest()).strip("=\n")
-        pk_encoded = base64.urlsafe_b64encode(struct.pack('I', int(instance.pk))).strip("=\n")
-        token = "{digest}{pk}".format(digest=digest_encoded, pk=pk_encoded).lower()
-        instance.key = token
+        instance.key = generate_random_access_token(instance.pk)
         instance.save(update_fields=['key'])
-        logger.debug("Creating token key for sender=%s instance=%s token=%s" % (sender, instance, token))
+        logger.debug("Creating token key for sender=%s instance=%s token=%s" % (sender, instance, instance.key))
 
 def create_client_secret(sender, instance, **kwargs):
+    '''
+     Sets a client secret for new Application instances (called via post_save signal).
+    '''
     if not instance.client_secret:
-        m = hashlib.sha1()
-        m.update(os.urandom(4096))
-        client_secret = m.hexdigest()
-        instance.client_secret = client_secret
+        instance.client_secret = generate_random_client_secret()
         instance.save(update_fields=['client_secret'])
-        logger.debug("Created client secret for sender=%s instance=%s client_secret=%s" % (sender, instance, client_secret))
+        logger.debug("Created client secret for sender=%s instance=%s client_secret=%s" % (sender, instance, instance.client_secret))
+
 
 signals.post_save.connect(create_client_secret, sender=Application)
 signals.post_save.connect(create_token_key, sender=Token)
