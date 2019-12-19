@@ -1,5 +1,6 @@
 
 [![Build Status](https://travis-ci.org/Harvard-ATG/media_management_api.svg)](https://travis-ci.org/Harvard-ATG/media_management_api)
+![Coverage Status](./coverage.svg)
 
 ### Quickstart
 
@@ -27,3 +28,11 @@ $ open http://localhost:8000
 - Access postgres database: `docker-compose exec db psql -U media_management_api`
 - Run unit tests: `docker-compose exec web python manage.py test`
 
+
+**Update the Coverage Badge**
+
+```
+$ coverage run --source='.' manage.py test
+$ coverage-badge -f -o coverage.svg
+```
+- Then commit and push the changes!

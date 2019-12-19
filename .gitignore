@@ -15,3 +15,5 @@ secure.py
 gunicorn.py
 # Where static files are collected
 http_static
+htmlcov
+.coverage
