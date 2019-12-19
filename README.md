@@ -33,6 +33,6 @@ $ open http://localhost:8000
 
 ```
 $ coverage run --source='.' manage.py test
-$ coverage-badge -o coverage.svg
+$ coverage-badge -f -o coverage.svg
 ```
 - Then commit and push the changes!
