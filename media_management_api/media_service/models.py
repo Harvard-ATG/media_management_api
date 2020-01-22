@@ -49,8 +49,11 @@ class MediaStore(BaseModel):
         verbose_name = 'media_store'
         verbose_name_plural = 'media_store'
 
-    def __unicode__(self):
+    def __repr__(self):
         return "MediaStore:{0}:{1}".format(self.id, self.file_name)
+
+    def __unicode__(self):
+        return self.file_name
 
     def _get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
@@ -128,8 +131,14 @@ class UserProfile(BaseModel):
         verbose_name = 'user_profile'
         verbose_name_plural = 'user_profiles'
 
+    def __repr__(self):
+        return 'UserProfile:%s:%s' % (self.pk, self.sis_user_id)
+
+    def __str__(self):
+        return self.__unicode__()
+
     def __unicode__(self):
-        return u'UserProfile:%s' % (self.sis_user_id)
+        return '%s:%s' % (self.pk, self.sis_user_id)
 
 class Course(BaseModel):
     title = models.CharField(max_length=255)
@@ -199,8 +208,14 @@ class Course(BaseModel):
 
         return course_copy
 
-    def __unicode__(self):
+    def __repr__(self):
         return u'Course:%s:%s' % (self.pk, self.title)
+
+    def __str__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        return self.title
 
 class CourseUser(BaseModel):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
@@ -235,8 +250,14 @@ class CourseUser(BaseModel):
         verbose_name_plural = 'course users'
         unique_together = ('course', 'user_profile', 'is_admin')
 
+    def __repr__(self):
+        return u'CourseUser:%s' % (self.pk)
+
+    def __str__(self):
+        return self.__unicode__()
+
     def __unicode__(self):
-        return u'CourseUser:%s' % (self.id)
+        return str(self.pk)
 
 def metadata_default():
     return json.dumps([])
@@ -337,8 +358,14 @@ class Resource(BaseModel, SortOrderModelMixin):
         except:
             return []
 
-    def __unicode__(self):
+    def __repr__(self):
         return u'Resource:{0}:{1}'.format(self.id, self.title)
+
+    def __str__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        return self.title
 
     @classmethod
     def get_course_images(cls, course_pk):
@@ -380,8 +407,14 @@ class Collection(BaseModel, SortOrderModelMixin):
         assert from_pk != to_pk, "copy should create a new collection instance"
         return from_pk, to_pk
 
-    def __unicode__(self):
+    def __repr__(self):
         return u'Collection:%s:%s' % (self.id, self.title)
+
+    def __str__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        return self.title
 
     @classmethod
     def get_course_collections(cls, course_pk):
@@ -414,8 +447,11 @@ class CollectionResource(BaseModel, SortOrderModelMixin):
         assert from_pk != to_pk, "copy should create a new collection resource instance"
         return from_pk, to_pk
 
+    def __repr__(self):
+        return u'CollectionResource:{0}'.format(self.pk)
+
     def __unicode__(self):
-        return u'CollectionResource:{0}'.format(self.id)
+        return str(self.pk)
 
     @classmethod
     def get_collection_images(cls, collection_pk):
@@ -473,5 +509,11 @@ class CourseCopy(BaseModel):
         except:
             return {}
 
+    def __repr__(self):
+        return u'CourseCopy:%s' % (self.pk)
+
+    def __str__(self):
+        return self.__unicode__()
+
     def __unicode__(self):
-        return u'CourseCopy:%s' % (self.id)
+        return str(self.pk)
