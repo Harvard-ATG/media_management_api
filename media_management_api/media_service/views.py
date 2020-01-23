@@ -477,7 +477,7 @@ Methods
             logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
             processed_uploads = processFileUploads(request.FILES.getlist(file_param))
             for index, f in processed_uploads.items():
-                data = request_data.copy()
+                data = request_data
                 logger.debug("Processing file upload: %s" % f.name)
                 serializer = self.get_serializer(data=data, context={'request': request}, is_upload=True, file_object=f)
                 serializers.append(serializer)
