@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .filters import IsCourseUserFilterBackend
 from .permissions import IsCourseUserAuthenticated
-from .models import Course, Collection, Resource, CollectionResource, CourseCopy
+from .models import Course, Collection, Resource, CollectionResource, CourseCopy, CourseUser
 from .mediastore import processFileUploads, processRemoteImages
 from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CourseCopySerializer
 
@@ -78,6 +78,11 @@ it to a course instance in this repository.
         queryset = super(CourseViewSet, self).get_queryset()
         return self.filter_queryset(queryset)
 
+    def create(self, request):
+        response = super(CourseViewSet, self).create(request)
+        if response.status_code == 201:
+            self._add_admin_to_course(user=request.user, course_id=response.data['id'])
+        return response
 
     def list(self, request, format=None):
         queryset = self.get_queryset()
@@ -106,6 +111,9 @@ it to a course instance in this repository.
         include = ['images', 'collections']
         serializer = self.get_serializer(course, context={'request': request}, include=include)
         return Response(serializer.data)
+
+    def _add_admin_to_course(self, user=None, course_id=None):
+        return CourseUser.add_user_to_course(user=user, course_id=course_id, is_admin=True)
 
 class CourseSearchView(GenericAPIView):
 
@@ -339,7 +347,7 @@ Provide an array of items, which are just collection objects:
 
     def post(self, request, pk=None, format=None):
         course_pk = pk
-        data = request.data.copy()
+        data = request.data
         course = get_object_or_404(Course, pk=course_pk)
         self.check_object_permissions(request, course)
 
@@ -355,10 +363,13 @@ Provide an array of items, which are just collection objects:
         course = get_object_or_404(Course, pk=course_pk)
         self.check_object_permissions(request, course)
 
+        if not isinstance(request.data, dict):
+            raise exceptions.APIException("Invalid data for course: %s." % course_pk)
+
         collections = self.get_queryset().filter(course__pk=course_pk).order_by('sort_order')
         collection_ids = [c.pk for c in collections]
         collection_map = dict([(c.pk, c) for c in collections])
-        data = request.data.copy()
+        data = request.data
 
         # Shortcut to just update the order of collections
         if 'sort_order' in data:
@@ -446,7 +457,7 @@ Methods
 
     def post(self, request, pk=None, format=None):
         logger.debug("request content_type=%s data=%s" % (request.content_type, request.data))
-        request_data = request.data.copy()
+        request_data = request.data
         course_pk = pk
         course = get_object_or_404(Course, pk=course_pk)
         self.check_object_permissions(request, course)
@@ -466,7 +477,7 @@ Methods
             logger.debug("File uploads: %s" % request.FILES.getlist(file_param))
             processed_uploads = processFileUploads(request.FILES.getlist(file_param))
             for index, f in processed_uploads.items():
-                data = request_data.copy()
+                data = request_data
                 logger.debug("Processing file upload: %s" % f.name)
                 serializer = self.get_serializer(data=data, context={'request': request}, is_upload=True, file_object=f)
                 serializers.append(serializer)
