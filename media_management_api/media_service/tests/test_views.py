@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
-from ..models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile
+from ..models import MediaStore, Course, Collection, Resource, CollectionResource, UserProfile, CourseUser
 
 class BaseApiTestCase(APITestCase):
     def _create_test_superuser(self):
@@ -12,13 +12,20 @@ class BaseApiTestCase(APITestCase):
         superuser.is_superuser = True
         superuser.save()
         return superuser
+    
+    def _create_test_nonsuperuser(self):
+        user_profile = UserProfile.get_or_create_profile("NonSuperuserTest")
+        nonsuperuser = user_profile.user
+        nonsuperuser.is_superuser = False
+        nonsuperuser.save()
+        return nonsuperuser
 
 class TestCourseEndpoint(BaseApiTestCase):
     fixtures = ['test.json']
 
     def setUp(self):
         self.superuser = self._create_test_superuser()
-        self.client.force_authenticate(self.superuser)
+        self.nonsuperuser = self._create_test_nonsuperuser()
 
     def get_example_item(self, detail=False):
         example_item = {
@@ -93,6 +100,8 @@ class TestCourseEndpoint(BaseApiTestCase):
         return example_item
 
     def test_course_list(self):
+        self.client.force_authenticate(self.superuser)
+
         courses = Course.objects.all()
         url = reverse('api:course-list')
         response = self.client.get(url)
@@ -107,6 +116,8 @@ class TestCourseEndpoint(BaseApiTestCase):
             self.assertEqual(actual_keys, expected_keys)
 
     def test_course_detail(self):
+        self.client.force_authenticate(self.superuser)
+
         pk = 1
         course = Course.objects.get(pk=pk)
         url = reverse('api:course-detail', kwargs={"pk": pk})
@@ -133,6 +144,8 @@ class TestCourseEndpoint(BaseApiTestCase):
                 self.assertEqual(item_keys, expected_image_keys)
 
     def test_create_course(self):
+        self.client.force_authenticate(self.superuser)
+
         url = reverse('api:course-list')
         body = {
             "title": "Test Course",
@@ -152,7 +165,28 @@ class TestCourseEndpoint(BaseApiTestCase):
             self.assertEqual(response.data[f], body[f])
             self.assertEqual(getattr(created_course, f), body[f])
 
+    def test_create_course_user_is_added_as_admin(self):
+        self.client.force_authenticate(self.nonsuperuser)
+
+        url = reverse('api:course-list')
+        body = {
+            "title": "Test Course",
+            "lti_context_id": "e4d7f1b4ed2e42d15898f4b27b019da4",
+            "lti_tool_consumer_instance_guid": "test.localhost"
+        }
+
+        # Create the new course
+        response = self.client.post(url, body)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue('id' in response.data)
+
+        course_id = response.data['id']
+        self.assertTrue(Course.objects.filter(pk=course_id).exists())
+        self.assertTrue(CourseUser.objects.filter(user_profile=self.nonsuperuser.profile, course_id=course_id, is_admin=True).exists())
+
     def test_delete_course(self):
+        self.client.force_authenticate(self.superuser)
+
         pk = 1
         url = reverse('api:course-detail', kwargs={"pk":pk})
         response = self.client.delete(url)
@@ -160,6 +194,8 @@ class TestCourseEndpoint(BaseApiTestCase):
         self.assertFalse(Course.objects.filter(pk=pk).exists())
 
     def test_update_course(self):
+        self.client.force_authenticate(self.superuser)
+
         pk = 1
         url = reverse('api:course-detail', kwargs={"pk": pk})
         body = {
@@ -185,6 +221,8 @@ class TestCourseEndpoint(BaseApiTestCase):
             self.assertEqual(getattr(course_after_update, f), body[f])
 
     def test_add_collection_to_course(self):
+        self.client.force_authenticate(self.superuser)
+
         pk = 1
         url = reverse('api:course-collections', kwargs={"pk": pk})
         body = {
@@ -206,6 +244,8 @@ class TestCourseEndpoint(BaseApiTestCase):
             self.assertEqual(getattr(created_collection, f), body[f])
 
     def test_update_order_of_collections_in_course(self):
+        self.client.force_authenticate(self.superuser)
+
         collections = Collection.objects.filter(course__pk=1).order_by('sort_order')
         original_order = [c.pk for c in collections]
         proposed_order = list(reversed(original_order))
@@ -220,26 +260,28 @@ class TestCourseEndpoint(BaseApiTestCase):
         updated_order = [c.pk for c in collections_after_update]
         self.assertEqual(updated_order, proposed_order)
 
-        def test_invalid_update_sort_order(self):
-            collections = Collection.objects.filter(course__pk=1).order_by('sort_order')
-            actual_order = [c.pk for c in collections]
-            order_missing_one_collection = actual_order[1:]
-            order_with_an_extra_collection = actual_order + [9999]
+    def test_invalid_update_sort_order(self):
+        self.client.force_authenticate(self.superuser)
 
-            pk = 1
-            url = reverse('api:course-collections', kwargs={"pk": pk})
-            invalid_data = [
-                None, True, False, '1,2,3', {},
-                {"sort_order": None},
-                {"sort_order": '1,2,3'},
-                {"sort_order": []},
-                {"sort_order": order_missing_one_collection},
-                {"sort_order": order_with_an_extra_collection},
-            ]
+        collections = Collection.objects.filter(course__pk=1).order_by('sort_order')
+        actual_order = [c.pk for c in collections]
+        order_missing_one_collection = actual_order[1:]
+        order_with_an_extra_collection = actual_order + [9999]
 
-            for data in invalid_data:
-                response = self.client.put(url, data)
-                self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        pk = 1
+        url = reverse('api:course-collections', kwargs={"pk": pk})
+        invalid_data = [
+            None, True, False, '1,2,3', {},
+            {"sort_order": None},
+            {"sort_order": '1,2,3'},
+            {"sort_order": []},
+            {"sort_order": order_missing_one_collection},
+            {"sort_order": order_with_an_extra_collection},
+        ]
+
+        for data in invalid_data:
+            response = self.client.put(url, data)
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class TestCollectionEndpoint(BaseApiTestCase):
     fixtures = ['test.json']

@@ -16,6 +16,7 @@ from django.core.files.base import File
 from django.db import transaction
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
+import boto.exception
 from PIL import Image
 
 from .models import MediaStore
@@ -206,7 +207,6 @@ class MediaStoreUpload:
         if self.instanceExists():
             logger.debug("instance exists")
             self.instance = self.getInstance()
-
         else:
             logger.debug("creating new instance")
             self.instance = self.createInstance()
@@ -291,16 +291,22 @@ class MediaStoreUpload:
         '''
         Saves the django UploadedFile to the designated S3 bucket.
         '''
-        connection = self.getS3connection()
-        bucket = self.getS3bucket(connection)
+        try:
+            connection = self.getS3connection()
+            bucket = self.getS3bucket(connection)
 
-        k = Key(bucket)
-        k.key = self.getS3FileKey()
-        self.file.seek(0)
+            k = Key(bucket)
+            k.key = self.getS3FileKey()
+            self.file.seek(0)
 
-        headers = {"Content-Type": self.instance.file_type}
-        logger.debug("Saving file to S3 bucket with key=%s headers=%s" % (k.key, headers))
-        k.set_contents_from_file(self.file, replace=True, headers=headers)
+            headers = {"Content-Type": self.instance.file_type}
+            logger.info("Saving file to S3 bucket with key=%s headers=%s" % (k.key, headers))
+            k.set_contents_from_file(self.file, replace=True, headers=headers)
+        
+        except boto.exception.NoAuthHandlerFound as e:
+            raise MediaStoreException("S3 Connection Error.  Details: %s" % str(e))
+        except boto.exception.S3ResponseError as e:
+            raise MediaStoreException("S3 Response Error.  Details: %s" % str(e))
 
         return True
 
