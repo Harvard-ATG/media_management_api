@@ -74,10 +74,6 @@ it to a course instance in this repository.
     permission_classes = (IsCourseUserAuthenticated,)
     filter_backends = (IsCourseUserFilterBackend,)
 
-    def get_queryset(self):
-        queryset = super(CourseViewSet, self).get_queryset()
-        return self.filter_queryset(queryset)
-
     def create(self, request):
         response = super(CourseViewSet, self).create(request)
         if response.status_code == 201:
