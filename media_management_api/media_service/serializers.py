@@ -178,7 +178,7 @@ def metadata_validator(value):
                 raise serializers.ValidationError("Metadata pair '%s' invalid. Must be a *dict*: {'label': '', 'value': ''}" % pair)
             if set(pair.keys()) != set(required_fields):
                 raise serializers.ValidationError("Metadata pair '%s' invalid. Must contain keys: label, value" % pair)
-            if not isinstance(pair['label'], basestring) or not isinstance(pair['value'], basestring):
+            if not isinstance(pair['label'], str) or not isinstance(pair['value'], str):
                 raise serializers.ValidationError("Metadata pair '%s' invalid. Label and value must be strings, not composite types." % pair)
 
 class ResourceSerializer(serializers.HyperlinkedModelSerializer):
