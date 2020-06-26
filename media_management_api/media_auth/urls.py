@@ -1,4 +1,4 @@
-from django.conf.urls import url, include
+from django.urls import path, include
 from . import views 
 
 # Wire up our API using automatic URL routing.
@@ -7,7 +7,7 @@ from . import views
 app_name = 'api-auth'
 
 urlpatterns = [
-    url(r'^obtain-token$', views.obtain_token, name='obtain-token'),
-    url(r'^check-token/(?P<access_token>.+)$', views.check_token, name='check-token'),
-    url(r'^destroy-token/(?P<access_token>.+)$', views.destroy_token, name='destroy-token'),
+    path('obtain-token/', views.obtain_token, name='obtain-token'),
+    path('check-token/<str:access_token>/', views.check_token, name='check-token'),
+    path('destroy-token/<str:access_token>/', views.destroy_token, name='destroy-token'),
 ]
