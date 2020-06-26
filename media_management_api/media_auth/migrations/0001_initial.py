@@ -28,8 +28,8 @@ class Migration(migrations.Migration):
                 ('key', models.CharField(max_length=40)),
                 ('scope', models.CharField(max_length=1024, blank=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('application', models.ForeignKey(related_name='user_tokens', to='media_auth.Application')),
-                ('user_profile', models.ForeignKey(related_name='user_tokens', to='media_service.UserProfile')),
+                ('application', models.ForeignKey(on_delete=models.CASCADE, related_name='user_tokens', to='media_auth.Application')),
+                ('user_profile', models.ForeignKey(on_delete=models.CASCADE, related_name='user_tokens', to='media_service.UserProfile')),
             ],
         ),
     ]
