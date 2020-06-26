@@ -2,6 +2,8 @@ from django.conf.urls import url
 from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 
+app_name = 'iiif'
+
 urlpatterns = [
     url(r'^$', views.IiifView.as_view(), name="root"),
     url(r'^collections$', views.IiifCollectionsView.as_view(), name='collections'),

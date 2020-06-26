@@ -2,6 +2,8 @@ from django.conf.urls import url, include
 from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 
+app_name = 'api'
+
 course_list = views.CourseViewSet.as_view({
     'get': 'list',
     'post': 'create',
@@ -49,7 +51,7 @@ urlpatterns = [
     url(r'^collection-images/(?P<pk>\d+)$', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
     url(r'^images$', image_list, name='image-list'),
     url(r'^images/(?P<pk>\d+)$', image_detail, name='image-detail'),
-    url(r'^iiif/', include('media_management_api.media_service.iiif.urls', namespace='iiif')),
+    url(r'^iiif/', include('media_management_api.media_service.iiif.urls')),
 
 ]
 
