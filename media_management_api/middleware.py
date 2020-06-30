@@ -1,9 +1,10 @@
 from django.db import connection
 import logging
+from django.utils.deprecation import MiddlewareMixin
 
 logger = logging.getLogger(__name__)
 
-class QueryCountDebugMiddleware(object):
+class QueryCountDebugMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         if response.status_code == 200:
             total_time = 0
@@ -20,6 +21,6 @@ class QueryCountDebugMiddleware(object):
             logger.debug('%s queries run, total %s seconds' % (len(connection.queries), total_time))
         return response
 
-class ExceptionLoggingMiddleware(object):
+class ExceptionLoggingMiddleware(MiddlewareMixin):
     def process_exception(self, request, exception):
         logger.exception('Exception logged for request: %s message: %s' % (request.path, str(exception)))
