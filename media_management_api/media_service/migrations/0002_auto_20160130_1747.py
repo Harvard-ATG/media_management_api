@@ -37,26 +37,26 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='collectionresource',
             name='collection',
-            field=models.ForeignKey(related_name='resources', to='media_service.Collection'),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='resources', to='media_service.Collection'),
         ),
         migrations.AlterField(
             model_name='collectionresource',
             name='resource',
-            field=models.ForeignKey(related_name='collection_resources', to='media_service.Resource'),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='collection_resources', to='media_service.Resource'),
         ),
         migrations.AlterField(
             model_name='resource',
             name='course',
-            field=models.ForeignKey(related_name='resources', to='media_service.Course'),
+            field=models.ForeignKey(on_delete=models.CASCADE,related_name='resources', to='media_service.Course'),
         ),
         migrations.AlterField(
             model_name='resource',
             name='owner',
-            field=models.ForeignKey(related_name='resources', blank=True, to='media_service.UserProfile', null=True),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='resources', blank=True, to='media_service.UserProfile', null=True),
         ),
         migrations.AlterField(
             model_name='userprofile',
             name='user',
-            field=models.OneToOneField(related_name='profile', null=True, on_delete=django.db.models.deletion.SET_NULL, blank=True, to=settings.AUTH_USER_MODEL),
+            field=models.OneToOneField(related_name='profile', null=True, on_delete=models.SET_NULL, blank=True, to=settings.AUTH_USER_MODEL),
         ),
     ]

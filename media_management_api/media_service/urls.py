@@ -1,6 +1,8 @@
-from django.conf.urls import url, include
+from django.urls import include, path
 from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
+
+app_name = 'api'
 
 course_list = views.CourseViewSet.as_view({
     'get': 'list',
@@ -36,20 +38,20 @@ image_detail = views.CourseImageViewSet.as_view({
 })
 
 urlpatterns = [
-    url(r'^$', views.APIRoot.as_view(), name="root"),
-    url(r'^courses$', course_list, name='course-list'),
-    url(r'^courses/search$', views.CourseSearchView.as_view(), name='course-search'),
-    url(r'^courses/(?P<pk>\d+)$', course_detail, name='course-detail'),
-    url(r'^courses/(?P<pk>\d+)/course_copy', views.CourseCopyView.as_view(), name='course-clones'),
-    url(r'^courses/(?P<pk>\d+)/collections$', views.CourseCollectionsView.as_view(), name='course-collections'),
-    url(r'^courses/(?P<pk>\d+)/images$', views.CourseImagesListView.as_view(), name='course-images'),
-    url(r'^collections$', collection_list, name='collection-list'),
-    url(r'^collections/(?P<pk>\d+)$', collection_detail, name='collection-detail'),
-    url(r'^collections/(?P<pk>\d+)/images$', views.CollectionImagesListView.as_view(), name='collectionimages-list'),
-    url(r'^collection-images/(?P<pk>\d+)$', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
-    url(r'^images$', image_list, name='image-list'),
-    url(r'^images/(?P<pk>\d+)$', image_detail, name='image-detail'),
-    url(r'^iiif/', include('media_management_api.media_service.iiif.urls', namespace='iiif')),
+    path('', views.APIRoot.as_view(), name="root"),
+    path('courses', course_list, name='course-list'),
+    path('courses/search', views.CourseSearchView.as_view(), name='course-search'),
+    path('courses/<int:pk>', course_detail, name='course-detail'),
+    path('courses/<int:pk>/course_copy', views.CourseCopyView.as_view(), name='course-clones'),
+    path('courses/<int:pk>/collections', views.CourseCollectionsView.as_view(), name='course-collections'),
+    path('courses/<int:pk>/images', views.CourseImagesListView.as_view(), name='course-images'),
+    path('collections', collection_list, name='collection-list'),
+    path('collections/<int:pk>', collection_detail, name='collection-detail'),
+    path('collections/<int:pk>/images', views.CollectionImagesListView.as_view(), name='collectionimages-list'),
+    path('collection-images/<int:pk>', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
+    path('images', image_list, name='image-list'),
+    path('images/<int:pk>', image_detail, name='image-detail'),
+    path('iiif', include('media_management_api.media_service.iiif.urls')),
 
 ]
 

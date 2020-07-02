@@ -39,20 +39,19 @@ INSTALLED_APPS = [
     'media_management_api.media_service',
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'media_management_api.middleware.ExceptionLoggingMiddleware',
 ]
 
 if DEBUG:
-    MIDDLEWARE_CLASSES = ['media_management_api.middleware.QueryCountDebugMiddleware'] + MIDDLEWARE_CLASSES
+    MIDDLEWARE = ['media_management_api.middleware.QueryCountDebugMiddleware'] + MIDDLEWARE
 
 # Authentication
 
@@ -87,7 +86,7 @@ WSGI_APPLICATION = 'media_management_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': SECURE_SETTINGS.get('db_default_name', 'media_management_api'),
         'USER': SECURE_SETTINGS.get('db_default_user', 'postgres'),
         'PASSWORD': SECURE_SETTINGS.get('db_default_password'),

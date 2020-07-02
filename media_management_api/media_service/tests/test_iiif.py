@@ -1,5 +1,5 @@
 import unittest
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.test import TestCase, RequestFactory
 
 from media_management_api.media_service.models import Course, Collection

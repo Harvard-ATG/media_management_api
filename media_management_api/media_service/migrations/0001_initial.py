@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('sort_order', models.IntegerField(default=0)),
-                ('collection', models.ForeignKey(related_name='images', to='media_service.Collection')),
+                ('collection', models.ForeignKey(on_delete=models.CASCADE, related_name='images', to='media_service.Collection')),
             ],
             options={
                 'verbose_name': 'collection resource',
@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                 ('title', models.CharField(max_length=255)),
                 ('description', models.TextField(blank=True)),
                 ('sort_order', models.IntegerField(default=0)),
-                ('course', models.ForeignKey(related_name='images', to='media_service.Course')),
+                ('course', models.ForeignKey(on_delete=models.CASCADE, related_name='images', to='media_service.Course')),
             ],
             options={
                 'verbose_name': 'resource',
@@ -118,7 +118,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True)),
                 ('updated', models.DateTimeField(auto_now=True)),
                 ('lti_user_id', models.CharField(unique=True, max_length=1024, blank=True)),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(on_delete=models.SET_NULL, to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'verbose_name': 'user_profile',
@@ -128,12 +128,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='resource',
             name='media_store',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.SET_NULL, to='media_service.MediaStore', null=True),
+            field=models.ForeignKey(on_delete=models.SET_NULL, to='media_service.MediaStore', null=True),
         ),
         migrations.AddField(
             model_name='resource',
             name='owner',
-            field=models.ForeignKey(to='media_service.UserProfile', null=True),
+            field=models.ForeignKey(on_delete=models.CASCADE, to='media_service.UserProfile', null=True),
         ),
         migrations.AlterUniqueTogether(
             name='course',
@@ -142,11 +142,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='collectionresource',
             name='resource',
-            field=models.ForeignKey(related_name='collections', to='media_service.Resource'),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='collections', to='media_service.Resource'),
         ),
         migrations.AddField(
             model_name='collection',
             name='course',
-            field=models.ForeignKey(related_name='collections', to='media_service.Course'),
+            field=models.ForeignKey(on_delete=models.CASCADE, related_name='collections', to='media_service.Course'),
         ),
     ]
