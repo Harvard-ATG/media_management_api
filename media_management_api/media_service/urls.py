@@ -45,6 +45,7 @@ urlpatterns = [
     path('courses/<int:pk>/course_copy', views.CourseCopyView.as_view(), name='course-clones'),
     path('courses/<int:pk>/collections', views.CourseCollectionsView.as_view(), name='course-collections'),
     path('courses/<int:pk>/images', views.CourseImagesListView.as_view(), name='course-images'),
+    path('courses/<int:pk>/library_export', views.CourseImagesListCsvExportView.as_view(), name='course-images-csv'),
     path('collections', collection_list, name='collection-list'),
     path('collections/<int:pk>', collection_detail, name='collection-detail'),
     path('collections/<int:pk>/images', views.CollectionImagesListView.as_view(), name='collectionimages-list'),

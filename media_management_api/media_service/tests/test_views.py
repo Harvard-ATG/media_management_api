@@ -220,6 +220,24 @@ class TestCourseEndpoint(BaseApiTestCase):
             self.assertEqual(response.data[f], body[f])
             self.assertEqual(getattr(course_after_update, f), body[f])
 
+    def test_course_images_list(self):
+        self.client.force_authenticate(self.superuser)
+
+        pk = 1
+        url = reverse('api:course-images', kwargs={"pk": pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()[0]['url'], 'http://testserver/api/images/1')
+
+    def test_course_images_csv(self):
+        self.client.force_authenticate(self.superuser)
+
+        pk = 1
+        url = reverse('api:course-images-csv', kwargs={"pk": pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['content-type'], 'text/csv; charset=utf-8')
+
     def test_add_collection_to_course(self):
         self.client.force_authenticate(self.superuser)
 
