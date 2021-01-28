@@ -23,6 +23,12 @@ $ docker-compose exec web python manage.py createsuperuser
 $ open http://localhost:8000
 ```
 
+**If you have created the docker image yet before the previous step**
+```
+$ docker build -t harvard-atg/media_management_api
+$ docker tag harvard-atg/media_management_api:latest harvard-atg/media_management_api:dev
+```
+
 **Other tasks:**
 
 - Access postgres database: `docker-compose exec db psql -U media_management_api`
