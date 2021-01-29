@@ -190,7 +190,7 @@ class CsvExportResourceSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Resource
-        fields = ('url', 'id', 'title', 'iiif_url', 'metadata')
+        fields = ('url', 'id', 'title', 'description','iiif_url', 'metadata')
 
     def get_iiif_url(self, resource):
         if resource.media_store:
