@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
 
 from .filters import IsCourseUserFilterBackend
