@@ -8,6 +8,7 @@ import json
 def resource_to_representation(resource):
     return resource.get_representation()
 
+
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
@@ -180,6 +181,22 @@ def metadata_validator(value):
                 raise serializers.ValidationError("Metadata pair '%s' invalid. Must contain keys: label, value" % pair)
             if not isinstance(pair['label'], str) or not isinstance(pair['value'], str):
                 raise serializers.ValidationError("Metadata pair '%s' invalid. Label and value must be strings, not composite types." % pair)
+
+
+class CsvExportResourceSerializer(serializers.HyperlinkedModelSerializer):
+    url = serializers.HyperlinkedIdentityField(view_name="api:image-detail", lookup_field="pk")
+    metadata = serializers.JSONField(binary=False, required=False, allow_null=True, validators=[metadata_validator])
+    iiif_url = serializers.SerializerMethodField() # implicitly refers to get_iiif_url :(
+
+    class Meta:
+        model = Resource
+        fields = ('url', 'id', 'title', 'description','iiif_url', 'metadata')
+
+    def get_iiif_url(self, resource):
+        if resource.media_store:
+            return resource.media_store.get_iiif_full_url(thumb=False)
+        return None
+
 
 class ResourceSerializer(serializers.HyperlinkedModelSerializer):
     url = serializers.HyperlinkedIdentityField(view_name="api:image-detail", lookup_field="pk")

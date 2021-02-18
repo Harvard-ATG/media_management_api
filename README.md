@@ -20,7 +20,13 @@ $ cp media_management_api/settings/secure.py.example media_management_api/settin
 $ docker-compose up
 $ docker-compose exec web python manage.py migrate
 $ docker-compose exec web python manage.py createsuperuser
-$ open http://localhost:8000
+$ open http://localhost:9000
+```
+
+**If you have not created the docker image yet before the previous step**
+```
+$ docker build -t harvard-atg/media_management_api .
+$ docker tag harvard-atg/media_management_api:latest harvard-atg/media_management_api:dev
 ```
 
 **Other tasks:**

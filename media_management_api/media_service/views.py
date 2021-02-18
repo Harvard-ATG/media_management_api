@@ -8,12 +8,13 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_csv.renderers import CSVRenderer
 
 from .filters import IsCourseUserFilterBackend
 from .permissions import IsCourseUserAuthenticated
 from .models import Course, Collection, Resource, CollectionResource, CourseCopy, CourseUser
 from .mediastore import processFileUploads, processRemoteImages
-from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CourseCopySerializer
+from .serializers import CourseSerializer, ResourceSerializer, CollectionSerializer, CollectionResourceSerializer, CourseCopySerializer, CsvExportResourceSerializer
 
 import logging
 
@@ -41,6 +42,7 @@ Courses Endpoints
 - `/courses/{pk}/course_copy` Lists a course's copy records
 - `/courses/{pk}/collections` Lists a course's collections
 - `/courses/{pk}/images`  Lists a course's images
+- `/courses/{pk}/library_export` Exports a course's images data to CSV
 
 Querying the list of courses
 ----------------------------
@@ -526,6 +528,45 @@ Methods
         msg = "Deleted %s images in course %s" % (num_deleted, course_pk)
         logger.info(msg)
         return Response({"message": msg})
+
+
+class CourseImagesListCsvExportView(GenericAPIView):
+    '''
+A **course images** resource is a set of *images* that belong to a *course*.
+This is also referred to as the course's image library.
+
+Endpoints
+----------------
+
+- `/courses/{pk}/library_export`
+
+Methods
+-------
+
+- `GET /courses/{pk}/library_export`  Exports images that belong to the course
+
+    '''
+    serializer_class = CsvExportResourceSerializer
+    queryset = Resource.objects.select_related('course', 'media_store')
+    # there is no browseable api renderer for this view
+    # by using CSVRender as the only format, you remove the '?format=csv' query parameters from 
+    # the url field in the output
+    renderer_classes = (CSVRenderer, )
+    permission_classes = (IsCourseUserAuthenticated,)
+    filter_backends = (IsCourseUserFilterBackend,)
+    course_user_filter_key = "course__pk__in"
+
+    def get_queryset(self):
+        queryset = super(CourseImagesListCsvExportView, self).get_queryset()
+        return self.filter_queryset(queryset)
+
+    def get(self, request, pk=None, format=None):
+        query_set = Resource.objects.select_related('course', 'media_store')
+        course_pk = pk
+        queryset = self.get_queryset()
+        queryset = queryset.filter(course__pk=course_pk).order_by('sort_order')
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
 
 class CollectionImagesListView(GenericAPIView):
