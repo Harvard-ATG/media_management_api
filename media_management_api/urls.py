@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('media_management_api.media_auth.urls')),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtian_pair'),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/', include('media_management_api.media_service.urls')),
     path('', RedirectView.as_view(url='/api/', permanent=False), name='index'),
