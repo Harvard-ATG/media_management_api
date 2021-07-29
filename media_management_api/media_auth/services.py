@@ -121,10 +121,9 @@ def add_user_to_course(user=None, course_id=None, is_admin=False):
 
 def get_access_token_from_request(request, type_str):
     authorization = request.META.get('HTTP_AUTHORIZATION', '')
-    access_token = None
-    if authorization.lower().startswith(type_str):
-        access_token = authorization.replace(type_str, "")
-    return access_token
+    if authorization.startswith(type_str):
+        return authorization.replace(type_str, "")
+    return None
 
 def assert_token_valid(token):
     return is_token_valid(token, raise_exception=True)
