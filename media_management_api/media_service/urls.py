@@ -52,7 +52,7 @@ urlpatterns = [
     path('collection-images/<int:pk>', views.CollectionImagesDetailView.as_view(), name='collectionimages-detail'),
     path('images', image_list, name='image-list'),
     path('images/<int:pk>', image_detail, name='image-detail'),
-    path('iiif', include('media_management_api.media_service.iiif.urls')),
+    path('iiif/', include('media_management_api.media_service.iiif.urls')),
 
 ]
 
