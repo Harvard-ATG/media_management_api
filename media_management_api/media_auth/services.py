@@ -32,6 +32,8 @@ def has_required_data(token, data):
 
 
 def decode_jwt(token):
+    # We only read the unverified token to get the "client_id" in order to successfully verify later.
+    # A token should not be trusted unless the signiture is verified.
     unverified_token = jwt.decode(token, options={"verify_signature":False})
     if not has_required_data(unverified_token, ("client_id", "course_id", "user_id", "course_permission")):
         return False
@@ -41,6 +43,7 @@ def decode_jwt(token):
             decoded = jwt.decode(token, key, algorithms=["HS256"])
             return decoded
         except jwt.exceptions.InvalidSignatureError:
+            logger.debug(f"Invalid signature for Token {unverified_token}")
             return False
     return False
 

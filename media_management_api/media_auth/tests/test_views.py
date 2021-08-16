@@ -26,7 +26,7 @@ class TestAuthViews(TestCase):
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {test_jwt}"
         }
-        response = self.client.get("/api/auth/update-user", **headers)
+        response = self.client.post("/api/auth/authorize-user", **headers)
         self.assertEqual(response.status_code, 200)
         updated_user = UserProfile.objects.get(sis_user_id=9999)
         course_user = CourseUser.objects.get(course=self.course, user_profile=updated_user)
@@ -44,7 +44,7 @@ class TestAuthViews(TestCase):
         write_headers = {
             "HTTP_AUTHORIZATION": f"Bearer {write_jwt}"
         }
-        self.client.get("/api/auth/update-user", **write_headers)
+        self.client.post("/api/auth/authorize-user", **write_headers)
         updated_user = UserProfile.objects.get(sis_user_id=9999)
         course_user = CourseUser.objects.get(course=self.course, user_profile=updated_user)
         self.assertEqual(course_user.is_admin, True)
@@ -60,7 +60,7 @@ class TestAuthViews(TestCase):
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {test_jwt}"
         }
-        response = self.client.get("/api/auth/update-user", **headers)
+        response = self.client.post("/api/auth/authorize-user", **headers)
         # course does not exist, so it is a bad request
         self.assertEqual(response.status_code, 400)
 
@@ -74,7 +74,7 @@ class TestAuthViews(TestCase):
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {test_jwt}"
         }
-        response = self.client.get("/api/auth/update-user", **headers)
+        response = self.client.post("/api/auth/authorize-user", **headers)
         # course_permission is missing, so it is a bad request
         self.assertEqual(response.status_code, 400)
 

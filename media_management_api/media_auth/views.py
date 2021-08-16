@@ -56,8 +56,8 @@ def destroy_token(request, access_token):
     return HttpResponse("Deleted token:%s" % (access_token))
 
 
-@require_http_methods(["GET"])
-def update_user(request):
+@require_http_methods(["POST"])
+def authorize_user(request):
     jwt = services.get_access_token_from_request(request, "Bearer ")
     if not jwt:
         return HttpResponseBadRequest("Not able to get JWT from request")
