@@ -1,7 +1,10 @@
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from media_management_api.media_service.models import UserProfile, Course, CourseUser
 from .models import Application, Token
 from .exceptions import InvalidApplicationError, InvalidTokenError
+
+import jwt
 
 import datetime
 import logging
@@ -16,10 +19,45 @@ TOKEN_EXPIRE = {"hours": 240}
 # Token refresh time used when obtaining recent tokens to ensure that the token is good for _at least_ 24 hours
 TOKEN_REFRESH = {"hours": 240 - 24}
 
+
+def get_client_key(header):
+    try:
+        return Application.objects.get(client_id=header['client_id']).client_secret
+    except (KeyError, Application.DoesNotExist):
+        return False
+
+   
+def has_required_data(token, data):
+    return all([k in token for k in data])
+
+
+def decode_jwt(token):
+    # We only read the unverified token to get the "client_id" in order to successfully verify later.
+    # A token should not be trusted unless the signiture is verified.
+    unverified_token = jwt.decode(token, options={"verify_signature":False})
+    if not has_required_data(unverified_token, ("client_id", "course_id", "user_id", "course_permission")):
+        return False
+    key = get_client_key(unverified_token)
+    if key:
+        try:
+            decoded = jwt.decode(token, key, algorithms=["HS256"])
+            return decoded
+        except jwt.exceptions.InvalidSignatureError:
+            logger.debug(f"Invalid signature for Token {unverified_token}")
+            return False
+    return False
+
+
+def get_course_user(token):
+    user = get_or_create_user(token["user_id"])
+    add_user_to_course(user=user, course_id=token["course_id"], is_admin=token["course_permission"] == "write")
+    return user
+
+
 def obtain_token(data):
     # Check that the required data are present
     required_data = ('client_id', 'client_secret', 'user_id')
-    if not all([k in data for k in required_data]):
+    if not has_required_data(data, required_data):
         raise InvalidApplicationError("Missing required data. Must include: %s" % ", ".join(required_data))
 
     # Validate the application
@@ -27,7 +65,7 @@ def obtain_token(data):
     if is_valid_application(client_id=data['client_id'], client_secret=data['client_secret'], raise_exception=True):
         application = Application.objects.get(client_id=data['client_id'], client_secret=data['client_secret'])
 
-     # Get or create a user profile
+    # Get or create a user profile
     if not data['user_id']:
         raise InvalidTokenError("Invalid user_id - must not be empty")
     user = get_or_create_user(data['user_id'])
@@ -84,12 +122,11 @@ def add_user_to_course(user=None, course_id=None, is_admin=False):
         raise InvalidTokenError("Course '%s' not found" % course_id)
     return course_user
 
-def get_access_token_from_request(request):
+def get_access_token_from_request(request, type_str):
     authorization = request.META.get('HTTP_AUTHORIZATION', '')
-    access_token = None
-    if authorization.lower().startswith("token "):
-        access_token = authorization.split(" ", 2)[1]
-    return access_token
+    if authorization.startswith(type_str):
+        return authorization.replace(type_str, "")
+    return None
 
 def assert_token_valid(token):
     return is_token_valid(token, raise_exception=True)

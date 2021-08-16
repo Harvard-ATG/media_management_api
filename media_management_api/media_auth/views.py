@@ -1,12 +1,11 @@
 from django.conf import settings
 from django.http import HttpResponse, Http404, HttpResponseBadRequest
-from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from . import services
-from .exceptions import MediaAuthException
+from .exceptions import MediaAuthException, InvalidTokenError
 
 import json
 import logging
@@ -55,3 +54,18 @@ def check_token(request, access_token):
 def destroy_token(request, access_token):
     services.destroy_token(access_token)
     return HttpResponse("Deleted token:%s" % (access_token))
+
+
+@require_http_methods(["POST"])
+def authorize_user(request):
+    jwt = services.get_access_token_from_request(request, "Bearer ")
+    if not jwt:
+        return HttpResponseBadRequest("Not able to get JWT from request")
+    decoded_token = services.decode_jwt(jwt)
+    if not decoded_token:
+        return HttpResponseBadRequest("Unable to verify the JWT")
+    try:
+        services.get_course_user(decoded_token) # strange name for this function
+    except InvalidTokenError:
+        return HttpResponseBadRequest("Course does not exist")
+    return HttpResponse("Ok", status=200)

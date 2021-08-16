@@ -17,3 +17,6 @@ gunicorn.py
 http_static
 htmlcov
 .coverage
+.envrc
+.python-version
+.vscode
