@@ -35,7 +35,7 @@ def decode_jwt(token):
     # We only read the unverified token to get the "client_id" in order to successfully verify later.
     # A token should not be trusted unless the signiture is verified.
     unverified_token = jwt.decode(token, options={"verify_signature":False})
-    if not has_required_data(unverified_token, ("client_id", "course_id", "user_id", "course_permission")):
+    if not has_required_data(unverified_token, ("client_id", "user_id")):
         return False
     key = get_client_key(unverified_token)
     if key:
@@ -43,14 +43,14 @@ def decode_jwt(token):
             decoded = jwt.decode(token, key, algorithms=["HS256"])
             return decoded
         except jwt.exceptions.InvalidSignatureError:
-            logger.debug(f"Invalid signature for Token {unverified_token}")
+            logger.error(f"Invalid signature for jwt: {unverified_token}")
             return False
     return False
 
 
 def get_course_user(token):
     user = get_or_create_user(token["user_id"])
-    add_user_to_course(user=user, course_id=token["course_id"], is_admin=token["course_permission"] == "write")
+    add_user_to_course(user=user, course_id=token["course_id"], is_admin=token.get("course_permission") == "write")
     return user
 
 
