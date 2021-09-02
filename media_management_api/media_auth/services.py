@@ -26,24 +26,27 @@ def get_client_key(header):
     except (KeyError, Application.DoesNotExist):
         return False
 
-   
-def has_required_data(token, data):
-    return all([k in token for k in data])
-
 
 def decode_jwt(token):
     # We only read the unverified token to get the "client_id" in order to successfully verify later.
-    # A token should not be trusted unless the signiture is verified.
-    unverified_token = jwt.decode(token, options={"verify_signature":False})
-    if not has_required_data(unverified_token, ("client_id", "user_id")):
+    # A token should not be trusted unless the signature is verified.
+    required_claims = ["iat", "exp", "user_id", "client_id"]
+    try:
+        unverified_token = jwt.decode(token, options={
+            "verify_signature": False,
+            "require": required_claims,
+        })
+    except jwt.exceptions.MissingRequiredClaimError as e:
+        logger.error(f"Missing claim for jwt: {e}")
         return False
+
     key = get_client_key(unverified_token)
     if key:
         try:
-            decoded = jwt.decode(token, key, algorithms=["HS256"])
+            decoded = jwt.decode(token, key, algorithms=["HS256"], leeway=10)
             return decoded
-        except jwt.exceptions.InvalidSignatureError:
-            logger.error(f"Invalid signature for jwt: {unverified_token}")
+        except jwt.exceptions.InvalidTokenError as e:
+            logger.error(f"Invalid token: {e} token: {token}")
             return False
     return False
 

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from django.test import TestCase
 import jwt
 
@@ -17,6 +18,8 @@ class TestAuthViews(TestCase):
     
     def test_update_user_with_new_user(self):
         test_payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=60),
             "client_id": "test",
             "course_id": self.course.pk,
             "user_id": 9999,
@@ -35,6 +38,8 @@ class TestAuthViews(TestCase):
 
     def test_update_user_write_permission(self):
         write_payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=60),
             "client_id": "test",
             "course_id": self.course.pk,
             "user_id": 9999,
@@ -51,6 +56,8 @@ class TestAuthViews(TestCase):
 
     def test_update_user_course_does_not_exist(self):
         payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=60),
             "client_id": "test",
             "course_id": 5,
             "user_id": 9999,
@@ -61,20 +68,20 @@ class TestAuthViews(TestCase):
             "HTTP_AUTHORIZATION": f"Bearer {test_jwt}"
         }
         response = self.client.post("/api/auth/authorize-user", **headers)
-        # course does not exist, so it is a bad request
-        self.assertEqual(response.status_code, 400)
+        # JWT is valid, but course does not exist, so return 404
+        self.assertEqual(response.status_code, 404)
 
-    def test_update_user_payload_not_complete(self):
+    def test_update_user_payload_missing_user_id(self):
         payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=60),
             "client_id": "test",
-            "course_id": self.course.pk,
-            "user_id": 9999,
         }
         test_jwt = jwt.encode(payload, "secret", algorithm="HS256")
         headers = {
             "HTTP_AUTHORIZATION": f"Bearer {test_jwt}"
         }
         response = self.client.post("/api/auth/authorize-user", **headers)
-        # course_permission is missing, so it is a bad request
+        # user_id is missing, so it is a bad request
         self.assertEqual(response.status_code, 400)
 

@@ -60,22 +60,22 @@ def destroy_token(request, access_token):
 def authorize_user(request):
     jwt = services.get_access_token_from_request(request, "Bearer ")
     if not jwt:
-        logger.error("authorize_user: jwt missing from authorization header")
+        logger.error("JWT missing from authorization header")
         return HttpResponseBadRequest("Not able to get JWT from request")
 
     decoded_token = services.decode_jwt(jwt)
     if not decoded_token:
-        logger.error(f"authorize_user: jwt decode failed: {jwt}")
+        logger.error(f"JWT decode failed: {jwt}")
         return HttpResponseBadRequest("Unable to verify the JWT")
 
     if "course_id" not in decoded_token:
-        logger.error(f"authorize_user: decoded token missing course_id: {decoded_token}")
+        logger.error(f"JWT missing course_id: {decoded_token}")
         return HttpResponseBadRequest("Missing course ID from token")
 
     try:
         services.get_course_user(decoded_token) # strange name for this function
     except InvalidTokenError:
-        logger.error(f"authorize_user: jwt course does not exist: {jwt}")
-        return HttpResponseNotFound("Course does not exist")
+        logger.error(f"JWT failed to authorize user because course does not exist")
+        return HttpResponseNotFound("Course not found")
 
     return HttpResponse({"success": True}, status=200, content_type="application/json")
