@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_http_methods
@@ -78,4 +78,4 @@ def authorize_user(request):
         logger.error(f"JWT failed to authorize user because course does not exist")
         return HttpResponseNotFound("Course not found")
 
-    return HttpResponse({"success": True}, status=200, content_type="application/json")
+    return JsonResponse({"success": True})
