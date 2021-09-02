@@ -78,4 +78,5 @@ def authorize_user(request):
         logger.error(f"JWT failed to authorize user because course does not exist")
         return HttpResponseNotFound("Course not found")
 
+    logger.info(f"Authorized user: {decoded_token}")
     return JsonResponse({"success": True})

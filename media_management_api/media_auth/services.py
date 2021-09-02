@@ -28,27 +28,30 @@ def get_client_key(header):
 
 
 def decode_jwt(token):
-    # We only read the unverified token to get the "client_id" in order to successfully verify later.
-    # A token should not be trusted unless the signature is verified.
     required_claims = ["iat", "exp", "user_id", "client_id"]
-    try:
-        unverified_token = jwt.decode(token, options={
-            "verify_signature": False,
+    algorithms = ["HS256"]
+    leeway = 10
+
+    def _decode_jwt(verify_signature=True, key=None):
+        return jwt.decode(token, key, algorithms=algorithms, leeway=leeway, options={
+            "verify_signature": verify_signature,
             "require": required_claims,
         })
-    except jwt.exceptions.MissingRequiredClaimError as e:
-        logger.error(f"Missing claim for jwt: {e}")
+
+    # We only read the unverified token to get the "client_id" in order to successfully verify later.
+    # A token should not be trusted until the signature is actually verified.
+    try:
+        unverified_token = _decode_jwt(verify_signature=False)
+        key = get_client_key(unverified_token)
+        if not key:
+            logger.error(f"Client key not found for jwt: {token}")
+            return False
+        verified_token = _decode_jwt(verify_signature=True, key=key)
+    except jwt.exceptions.InvalidTokenError as e:
+        logger.error(f"Invalid token error: {e} jwt: {token}")
         return False
 
-    key = get_client_key(unverified_token)
-    if key:
-        try:
-            decoded = jwt.decode(token, key, algorithms=["HS256"], leeway=10)
-            return decoded
-        except jwt.exceptions.InvalidTokenError as e:
-            logger.error(f"Invalid token: {e} token: {token}")
-            return False
-    return False
+    return verified_token
 
 
 def get_course_user(token):
