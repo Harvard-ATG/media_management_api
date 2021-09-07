@@ -266,3 +266,5 @@ CORS_ALLOW_HEADERS = (
         'authorization',
         'x-csrftoken'
     )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
