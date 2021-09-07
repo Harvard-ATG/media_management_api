@@ -27,6 +27,10 @@ def get_client_key(header):
         return False
 
 
+def has_required_data(token, data):
+    return all([k in token for k in data])
+
+
 def decode_jwt(token):
     required_claims = ["iat", "exp", "user_id", "client_id"]
     algorithms = ["HS256"]
