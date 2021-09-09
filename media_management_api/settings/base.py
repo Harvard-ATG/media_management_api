@@ -256,7 +256,7 @@ AWS_S3_BUCKET = SECURE_SETTINGS["aws_s3_bucket"]
 AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
 
 # CORS headers
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = (
         'x-requested-with',
         'X-File-Size',
@@ -266,3 +266,5 @@ CORS_ALLOW_HEADERS = (
         'authorization',
         'x-csrftoken'
     )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

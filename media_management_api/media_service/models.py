@@ -1,7 +1,6 @@
 from django.db import models, transaction, Error
 from django.db.models import Max
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import JSONField
 from django.conf import settings
 from urllib.parse import quote
 import json
@@ -154,7 +153,7 @@ class Course(BaseModel):
         verbose_name = 'course'
         verbose_name_plural = 'courses'
         ordering = ["title"]
-        unique_together = ("lti_context_id", "lti_tool_consumer_instance_guid")
+        unique_together = ["lti_context_id", "lti_tool_consumer_instance_guid"]
 
     def copy(self, dest_course):
         '''
@@ -248,7 +247,7 @@ class CourseUser(BaseModel):
     class Meta:
         verbose_name = 'course user'
         verbose_name_plural = 'course users'
-        unique_together = ('course', 'user_profile', 'is_admin')
+        unique_together = ['course', 'user_profile', 'is_admin']
 
     def __repr__(self):
         return u'CourseUser:%s' % (self.pk)
