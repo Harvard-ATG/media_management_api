@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.http import HttpResponse, Http404, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest, JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django.views.decorators.http import require_http_methods
@@ -34,7 +34,6 @@ def obtain_token(request):
     except MediaAuthException as e:
         logger.debug(e.as_json())
         return HttpResponseBadRequest(e.as_json())
-    
 
     token_json = json.dumps(token)
     return HttpResponse(content=token_json, content_type="application/json")
@@ -57,15 +56,27 @@ def destroy_token(request, access_token):
 
 
 @require_http_methods(["POST"])
+@csrf_exempt
 def authorize_user(request):
     jwt = services.get_access_token_from_request(request, "Bearer ")
     if not jwt:
+        logger.warning("JWT missing from authorization header")
         return HttpResponseBadRequest("Not able to get JWT from request")
+
     decoded_token = services.decode_jwt(jwt)
     if not decoded_token:
+        logger.warning(f"JWT decode failed: {jwt}")
         return HttpResponseBadRequest("Unable to verify the JWT")
+
+    if "course_id" not in decoded_token:
+        logger.warning(f"JWT missing course_id: {decoded_token}")
+        return HttpResponseBadRequest("Missing course ID from token")
+
     try:
         services.get_course_user(decoded_token) # strange name for this function
     except InvalidTokenError:
-        return HttpResponseBadRequest("Course does not exist")
-    return HttpResponse("Ok", status=200)
+        logger.warning(f"JWT failed to authorize user because course does not exist")
+        return HttpResponseNotFound("Course not found")
+
+    logger.info(f"Authorized user: {decoded_token}")
+    return JsonResponse({"success": True})

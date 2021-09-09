@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import unittest
 import jwt
 
@@ -42,7 +43,11 @@ class JWTAuthTest(unittest.TestCase):
         self.assertEqual(has_required_data(data_to_check_in, data_to_check_for), False)
 
     def test_decode_jwt(self):
+        issued_at = datetime.utcnow()
+        expiration = issued_at + timedelta(seconds=60)
         test_payload = {
+            "iat": int(issued_at.timestamp()),
+            "exp": int(expiration.timestamp()),
             "client_id": "test",
             "course_id": 178,
             "user_id": 12345,
@@ -52,8 +57,35 @@ class JWTAuthTest(unittest.TestCase):
         decoded_jwt = decode_jwt(test_jwt)
         self.assertEqual(decoded_jwt, test_payload)
 
+    def test_decode_jwt_missing_expiration(self):
+        test_payload = {
+            "iat": datetime.utcnow(),
+            "client_id": "test",
+            "course_id": 178,
+            "user_id": 12345,
+            "course_permission": "read"
+        }
+        test_jwt = jwt.encode(test_payload, "secret", algorithm="HS256")
+        decoded_jwt = decode_jwt(test_jwt)
+        self.assertEqual(decoded_jwt, False)
+
+    def test_decode_jwt_expired(self):
+        test_payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() - timedelta(seconds=120),
+            "client_id": "test",
+            "course_id": 178,
+            "user_id": 12345,
+            "course_permission": "read"
+        }
+        test_jwt = jwt.encode(test_payload, "secret", algorithm="HS256")
+        decoded_jwt = decode_jwt(test_jwt)
+        self.assertEqual(decoded_jwt, False)
+
     def test_decode_jwt_unregistered_client(self):
         test_payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=60),
             "client_id": "not registered",
             "course_id": 178,
             "user_id": 12345,
@@ -65,6 +97,8 @@ class JWTAuthTest(unittest.TestCase):
 
     def test_decode_jwt_bad_secret(self):
         test_payload = {
+            "iat": datetime.utcnow(),
+            "exp": datetime.utcnow() + timedelta(seconds=60),
             "client_id": "test",
             "course_id": 178,
             "user_id": 12345,

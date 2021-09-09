@@ -26,31 +26,41 @@ def get_client_key(header):
     except (KeyError, Application.DoesNotExist):
         return False
 
-   
+
 def has_required_data(token, data):
     return all([k in token for k in data])
 
 
 def decode_jwt(token):
+    required_claims = ["iat", "exp", "user_id", "client_id"]
+    algorithms = ["HS256"]
+    leeway = 10
+
+    def _decode_jwt(verify_signature=True, key=None):
+        return jwt.decode(token, key, algorithms=algorithms, leeway=leeway, options={
+            "verify_signature": verify_signature,
+            "require": required_claims,
+        })
+
     # We only read the unverified token to get the "client_id" in order to successfully verify later.
-    # A token should not be trusted unless the signiture is verified.
-    unverified_token = jwt.decode(token, options={"verify_signature":False})
-    if not has_required_data(unverified_token, ("client_id", "course_id", "user_id", "course_permission")):
-        return False
-    key = get_client_key(unverified_token)
-    if key:
-        try:
-            decoded = jwt.decode(token, key, algorithms=["HS256"])
-            return decoded
-        except jwt.exceptions.InvalidSignatureError:
-            logger.debug(f"Invalid signature for Token {unverified_token}")
+    # A token should not be trusted until the signature is actually verified.
+    try:
+        unverified_token = _decode_jwt(verify_signature=False)
+        key = get_client_key(unverified_token)
+        if not key:
+            logger.error(f"Client key not found for jwt: {token}")
             return False
-    return False
+        verified_token = _decode_jwt(verify_signature=True, key=key)
+    except jwt.exceptions.InvalidTokenError as e:
+        logger.error(f"Invalid token error: {e} jwt: {token}")
+        return False
+
+    return verified_token
 
 
 def get_course_user(token):
     user = get_or_create_user(token["user_id"])
-    add_user_to_course(user=user, course_id=token["course_id"], is_admin=token["course_permission"] == "write")
+    add_user_to_course(user=user, course_id=token["course_id"], is_admin=token.get("course_permission") == "write")
     return user
 
 
