@@ -1,10 +1,7 @@
 from django.db import models
 from django.db.models import signals
-from media_management_api.media_service.models import UserProfile
 
 import os
-import base64
-import struct
 import hashlib
 import logging
 
@@ -22,17 +19,6 @@ class Application(models.Model):
         verbose_name_plural = 'applications'
         ordering = ["client_id"]
 
-class Token(models.Model):
-    key = models.CharField(max_length=80, unique=True, blank=False)
-    scope = models.CharField(max_length=1024, blank=True)
-    created = models.DateTimeField(auto_now_add=True)
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="user_tokens")
-    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name='user_tokens')
-
-    class Meta:
-        verbose_name = 'token'
-        verbose_name_plural = 'tokens'
-        ordering = ["-created"]
 
 def generate_random_client_secret():
     '''
@@ -42,27 +28,6 @@ def generate_random_client_secret():
     m.update(os.urandom(4096))
     return m.hexdigest()
 
-def generate_random_access_token(pk):
-    '''
-    Returns a unique, non-guessable string that can be used as the access token.
-    '''
-    m = hashlib.sha1()
-    m.update(os.urandom(4096))
-
-    digest_encoded_bytes = base64.urlsafe_b64encode(m.digest())
-    pk_encoded_bytes = base64.urlsafe_b64encode(struct.pack('I', int(pk))) # ensure uniqueness
-    token = (digest_encoded_bytes + pk_encoded_bytes).strip(b"=\n").decode("utf-8")
-
-    return token
-
-def create_token_key(sender, instance, **kwargs):
-    '''
-    Sets an access token for new Token instances (called via post_save signal).
-    '''
-    if not instance.key:
-        instance.key = generate_random_access_token(instance.pk)
-        instance.save(update_fields=['key'])
-        logger.debug("Creating token key for sender=%s instance=%s token=%s" % (sender, instance, instance.key))
 
 def create_client_secret(sender, instance, **kwargs):
     '''
@@ -75,4 +40,3 @@ def create_client_secret(sender, instance, **kwargs):
 
 
 signals.post_save.connect(create_client_secret, sender=Application)
-signals.post_save.connect(create_token_key, sender=Token)
