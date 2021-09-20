@@ -235,7 +235,6 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
          'rest_framework.authentication.SessionAuthentication',
-         'media_management_api.media_auth.authentication.CustomTokenAuthentication',
          'media_management_api.media_auth.authentication.CustomJWTAuthentication',
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
