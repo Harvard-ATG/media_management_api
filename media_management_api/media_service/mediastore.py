@@ -14,7 +14,7 @@ from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
 from django.core.files.base import File
 from django.db import transaction
-from boto.s3.connection import S3Connection
+from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from boto.s3.key import Key
 import boto.exception
 from PIL import Image
@@ -277,9 +277,15 @@ class MediaStoreUpload:
 
     def getS3connection(self):
         '''
-        Returns an S3Connection instance.
+        Returns an S3Connection instance. The connection uses an ordinary
+        calling format to accommodate bucket names with "." characters. See
+        https://stackoverflow.com/questions/28115250/boto-ssl-certificate-verify-failed-certificate-verify-failed-while-connecting
+        for details.
         '''
-        return S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
+        return S3Connection(
+            AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY, 
+            calling_format=OrdinaryCallingFormat()
+        )
 
     def getS3bucket(self, connection):
         '''
