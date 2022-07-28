@@ -50,9 +50,8 @@ if MPS_WORKFLOW:
     LTS_MPS_KEY_PATH = settings.LTS_MPS_KEY_PATH
 
 # Modify max image size that pillow will accept
-# Using the VisibleEarth High Resolution Map as a reference size
-# (https://www.h-schmidt.net/map/)
-PIL.Image.MAX_IMAGE_PIXELS = 933120000  # E.g. 43200x21600
+# Using the VisibleEarth High Resolution Map as a reference size (https://www.h-schmidt.net/map/)
+PIL.Image.MAX_IMAGE_PIXELS = 933120000 # E.g. 43200x21600
 
 
 class MediaStoreException(Exception):

@@ -10,7 +10,6 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 import os
 import sys
 import logging
-
 from .secure import SECURE_SETTINGS
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
