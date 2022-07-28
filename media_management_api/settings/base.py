@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 import os
 import sys
 import logging
+
 from .secure import SECURE_SETTINGS
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -238,6 +239,9 @@ REST_FRAMEWORK = {
          'media_management_api.media_auth.authentication.CustomJWTAuthentication',
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.AcceptHeaderVersioning',
+    'DEFAULT_VERSION': 1,
+    'ALLOWED_VERSIONS': [1, 2]
 }
 
 # IIIF settings
@@ -253,6 +257,17 @@ AWS_ACCESS_KEY_ID = SECURE_SETTINGS.get("aws_access_key_id", None)
 AWS_ACCESS_SECRET_KEY = SECURE_SETTINGS.get("aws_access_secret_key", None)
 AWS_S3_BUCKET = SECURE_SETTINGS["aws_s3_bucket"]
 AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
+
+# LTS MPS credentials
+# If all options for using LTS MPS are present, set MPS_WORKFLOW to True
+# If not, 
+if all([option in SECURE_SETTINGS for option in ['lts_mps_issuer', 'lts_mps_kid', 'lts_mps_key_path']]):
+    LTS_MPS_ISSUER = SECURE_SETTINGS.get('lts_mps_issuer')
+    LTS_MPS_KID = SECURE_SETTINGS.get('lts_mps_kid',)
+    LTS_MPS_KEY_PATH = SECURE_SETTINGS.get('lts_mps_key_path')
+    MPS_WORKFLOW = True
+else:
+    MPS_WORKFLOW = False
 
 # CORS headers
 CORS_ALLOW_ALL_ORIGINS = True

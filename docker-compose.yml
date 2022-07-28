@@ -13,11 +13,11 @@ services:
   web:
     build: .
     image: harvard-atg/media_management_api:dev
-    command: ["./wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:9000"]
+    command: ["./wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:8080"]
     volumes:
       - .:/code
     ports:
-      - "9000:9000"
+      - "8080:8080"
     depends_on:
       - db
       - redis

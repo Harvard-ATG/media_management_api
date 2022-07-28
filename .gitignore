@@ -12,6 +12,7 @@ sqlnet.log
 /rest_framework
 # Generated files
 secure.py
+mps_key
 gunicorn.py
 # Where static files are collected
 http_static
