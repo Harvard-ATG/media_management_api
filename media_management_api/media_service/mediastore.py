@@ -42,8 +42,8 @@ VALID_IMAGE_EXT_FOR_TYPE = {
 }
 VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
 
-MPS_WORKFLOW = settings.MPS_WORKFLOW
-if MPS_WORKFLOW:
+LTS_MPS_WORKFLOW = settings.LTS_MPS_WORKFLOW
+if LTS_MPS_WORKFLOW:
     # LTS MPS credentials
     LTS_MPS_ISSUER = settings.LTS_MPS_ISSUER
     LTS_MPS_KID = settings.LTS_MPS_KID
@@ -229,7 +229,7 @@ class MediaStoreUpload:
         self._is_valid = True
         self._error = {}
         self._raise_for_error = False
-        self._mps_workflow = MPS_WORKFLOW
+        self._LTS_MPS_WORKFLOW = LTS_MPS_WORKFLOW
 
     def raise_for_error(self):
         self._raise_for_error = True
@@ -248,8 +248,11 @@ class MediaStoreUpload:
             logger.debug("creating new instance")
             self.instance = self.createInstance()
             self.instance.save()
-            if self._mps_workflow:
-                self.ingest()
+            if self._LTS_MPS_WORKFLOW:
+                result = self.ingest()
+                self.instance.mps_id = result
+                logger.debug(result)
+                self.instance.save()
             else:
                 self.saveToBucket()
         return self.instance
@@ -534,7 +537,7 @@ class MediaStoreUpload:
         """
         client = self.createMpsClient()
         images = [{
-            "label": self.instance.file_name,
+            "name": self.instance.file_name,
             "fileobj": self.file
         }]
         manifest_level_metadata = {
@@ -542,7 +545,10 @@ class MediaStoreUpload:
         }
         # Get s3 path from default key minus file name
         s3_path = self.getS3FileKey().replace(self.instance.file_name, "")
+        logger.debug(s3_path)
+        logger.debug(self.file.tell())
         assets = client.upload(images, s3_path=s3_path)
+        logger.debug([asset.s3key for asset in assets])
         manifest = client.create_manifest(
             manifest_level_metadata=manifest_level_metadata,
             assets=assets)
@@ -550,8 +556,17 @@ class MediaStoreUpload:
         # have one image in this context
         policyDefinition = create_policy_definition(assets[0])
         result = client.ingest(
-            manifest=manifest, assets=assets,
+            manifest=manifest,
+            assets=assets,
             policy_definition=policyDefinition
             )
-        status = client.jobstatus(result['job_id'])
-        return status['completed']
+        logger.debug("Job ID: {job_id}".format(job_id=result["job_id"]))
+        status = client.jobstatus(result["job_id"])
+        if status['job_status'] == "success":
+            identifier = result['data']['job_tracker_file']['context']['assets']['image'][0]['identifier']
+            return identifier
+        else:
+            errmsg = status['message']
+            self.error('ingest', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)
