@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 IIIF_IMAGE_SERVER_URL = settings.IIIF_IMAGE_SERVER_URL
 AWS_S3_BUCKET = settings.AWS_S3_BUCKET
 AWS_S3_KEY_PREFIX = settings.AWS_S3_KEY_PREFIX
+LTS_MPS_WORKFLOW = settings.LTS_MPS_WORKFLOW
+
+if LTS_MPS_WORKFLOW:
+    LTS_MPS_AUTHORITY = settings.LTS_MPS_AUTHORITY
 
 class BaseModel(models.Model):
     created = models.DateTimeField(auto_now_add=True)
@@ -43,6 +47,7 @@ class MediaStore(BaseModel):
     img_width = models.PositiveIntegerField(null=True)
     img_height = models.PositiveIntegerField(null=True)
     reference_count = models.PositiveIntegerField(default=0)
+    mps_id = models.CharField(max_length=1024, null=True)
 
     class Meta:
         verbose_name = 'media_store'
@@ -56,12 +61,17 @@ class MediaStore(BaseModel):
 
     def _get_iiif_identifier(self, encode=False):
         identifier = "{bucket}/{keyname}".format(bucket=AWS_S3_BUCKET, keyname=self.get_s3_keyname())
+
         if encode:
             identifier = quote(identifier, safe='') # Make sure "/" is percent-encoded too!
+
         return identifier
 
     def get_iiif_base_url(self):
-        identifier = self._get_iiif_identifier(encode=True)
+        if LTS_MPS_WORKFLOW:
+            identifier = self.mps_id
+        else:
+            identifier = self._get_iiif_identifier(encode=True)
         return '{base_url}{identifier}'.format(base_url=IIIF_IMAGE_SERVER_URL, identifier=identifier)
 
     def get_iiif_full_url(self, thumb=False):
@@ -71,8 +81,13 @@ class MediaStore(BaseModel):
             w, h = self.calc_thumb_size()
             size = "{thumb_w},{thumb_h}".format(thumb_w=w, thumb_h=h)
 
+        if LTS_MPS_WORKFLOW:
+            identifier = self.mps_id
+        else:
+            identifier = self._get_iiif_identifier(encode=True)
+
         url = MediaStore.make_iiif_image_server_url({
-            "identifier": self._get_iiif_identifier(encode=True),
+            "identifier": identifier,
             "region": "full",
             "size": size,
             "rotation": 0,

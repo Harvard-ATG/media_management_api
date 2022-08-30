@@ -14,10 +14,13 @@ from django.core.files.images import get_image_dimensions
 from django.core.files.uploadedfile import UploadedFile
 from django.core.files.base import File
 from django.db import transaction
-from boto.s3.connection import S3Connection
+from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from boto.s3.key import Key
 import boto.exception
 from PIL import Image
+import boto3
+from IIIFingest.client import Client
+from IIIFingest.auth import Credentials
 
 from .models import MediaStore
 
@@ -38,6 +41,13 @@ VALID_IMAGE_EXT_FOR_TYPE = {
     'image/tiff': 'tif',
 }
 VALID_IMAGE_TYPES = sorted(VALID_IMAGE_EXT_FOR_TYPE.keys())
+
+LTS_MPS_WORKFLOW = settings.LTS_MPS_WORKFLOW
+if LTS_MPS_WORKFLOW:
+    # LTS MPS credentials
+    LTS_MPS_ISSUER = settings.LTS_MPS_ISSUER
+    LTS_MPS_KID = settings.LTS_MPS_KID
+    LTS_MPS_KEY_PATH = settings.LTS_MPS_KEY_PATH
 
 # Modify max image size that pillow will accept
 # Using the VisibleEarth High Resolution Map as a reference size (https://www.h-schmidt.net/map/)
@@ -155,6 +165,32 @@ def processFileUploads(filelist):
     return processed
 
 
+def create_policy_definition(asset):
+    policyDefinition = {
+            "policy": {
+                "authenticated": {
+                    "height": asset.height,
+                    "width": asset.width
+                },
+                "public": {
+                    "height": asset.height,
+                    "width": asset.width
+                }
+            },
+            "thumbnail": {
+                "authenticated": {
+                    "height": 250,
+                    "width": 250
+                },
+                "public": {
+                    "height": 250,
+                    "width": 250
+                }
+            }
+        }
+    return policyDefinition
+
+
 class MediaStoreUpload:
     '''
     The MediaStoreUpload class is responsible for storing a django UploadedFile.
@@ -193,6 +229,7 @@ class MediaStoreUpload:
         self._is_valid = True
         self._error = {}
         self._raise_for_error = False
+        self._LTS_MPS_WORKFLOW = LTS_MPS_WORKFLOW
 
     def raise_for_error(self):
         self._raise_for_error = True
@@ -211,7 +248,13 @@ class MediaStoreUpload:
             logger.debug("creating new instance")
             self.instance = self.createInstance()
             self.instance.save()
-            self.saveToBucket()
+            if self._LTS_MPS_WORKFLOW:
+                result = self.ingest()
+                self.instance.mps_id = result
+                logger.debug(result)
+                self.instance.save()
+            else:
+                self.saveToBucket()
         return self.instance
 
     def isValid(self):
@@ -277,9 +320,15 @@ class MediaStoreUpload:
 
     def getS3connection(self):
         '''
-        Returns an S3Connection instance.
+        Returns an S3Connection instance. The connection uses an ordinary
+        calling format to accommodate bucket names with "." characters. See
+        https://stackoverflow.com/questions/28115250/boto-ssl-certificate-verify-failed-certificate-verify-failed-while-connecting
+        for details.
         '''
-        return S3Connection(AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY)
+        return S3Connection(
+            AWS_ACCESS_KEY_ID, AWS_ACCESS_SECRET_KEY, 
+            calling_format=OrdinaryCallingFormat()
+        )
 
     def getS3bucket(self, connection):
         '''
@@ -461,3 +510,63 @@ class MediaStoreUpload:
                     dest.write(c)
             else:
                 dest.write(file.read())
+
+    def createMpsClient(self):
+        jwt_creds = Credentials(
+            issuer=LTS_MPS_ISSUER,
+            kid=LTS_MPS_KID,
+            private_key_path=LTS_MPS_KEY_PATH
+        )
+        client = Client(
+            account="at",
+            space="atmediamanager",
+            namespace="at",
+            environment="qa",
+            asset_prefix="atmmapi",
+            jwt_creds=jwt_creds,
+            boto_session=boto3.Session(
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=AWS_ACCESS_SECRET_KEY,
+            )
+        )
+        return client
+
+    def ingest(self):
+        """
+        Ingest a file-like object to the LTS MPS infrastructure
+        """
+        client = self.createMpsClient()
+        images = [{
+            "name": self.instance.file_name,
+            "fileobj": self.file
+        }]
+        manifest_level_metadata = {
+            "labels": [self.instance.file_name]
+        }
+        # Get s3 path from default key minus file name
+        s3_path = self.getS3FileKey().replace(self.instance.file_name, "")
+        logger.debug(s3_path)
+        logger.debug(self.file.tell())
+        assets = client.upload(images, s3_path=s3_path)
+        logger.debug([asset.s3key for asset in assets])
+        manifest = client.create_manifest(
+            manifest_level_metadata=manifest_level_metadata,
+            assets=assets)
+        # Using assets[0] to get height and width since assets should only ever
+        # have one image in this context
+        policyDefinition = create_policy_definition(assets[0])
+        result = client.ingest(
+            manifest=manifest,
+            assets=assets,
+            policy_definition=policyDefinition
+            )
+        logger.debug("Job ID: {job_id}".format(job_id=result["job_id"]))
+        status = client.jobstatus(result["job_id"])
+        if status['job_status'] == "success":
+            identifier = result['data']['job_tracker_file']['context']['assets']['image'][0]['identifier']
+            return identifier
+        else:
+            errmsg = status['message']
+            self.error('ingest', errmsg)
+            if self._raise_for_error:
+                raise MediaStoreException(errmsg)

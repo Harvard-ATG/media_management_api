@@ -238,6 +238,9 @@ REST_FRAMEWORK = {
          'media_management_api.media_auth.authentication.CustomJWTAuthentication',
     ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.AcceptHeaderVersioning',
+    'DEFAULT_VERSION': 1,
+    'ALLOWED_VERSIONS': [1, 2]
 }
 
 # IIIF settings
@@ -253,6 +256,25 @@ AWS_ACCESS_KEY_ID = SECURE_SETTINGS.get("aws_access_key_id", None)
 AWS_ACCESS_SECRET_KEY = SECURE_SETTINGS.get("aws_access_secret_key", None)
 AWS_S3_BUCKET = SECURE_SETTINGS["aws_s3_bucket"]
 AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
+
+# LTS MPS credentials
+# If all options for using LTS MPS are present, set LTS_MPS_WORKFLOW to True
+# If not, set LTS_MPS_WORKFLOW to False. All functions related to MPS workflow 
+# should first check if the workflow is true before using any other MPS vars.
+_mps_options = (
+    'lts_mps_issuer',
+    'lts_mps_kid',
+    'lts_mps_key_path',
+    'lts_mps_authority'
+)
+if all([option in SECURE_SETTINGS for option in _mps_options]):
+    LTS_MPS_ISSUER = SECURE_SETTINGS.get('lts_mps_issuer')
+    LTS_MPS_KID = SECURE_SETTINGS.get('lts_mps_kid')
+    LTS_MPS_KEY_PATH = SECURE_SETTINGS.get('lts_mps_key_path')
+    LTS_MPS_AUTHORITY = SECURE_SETTINGS.get('lts_mps_authority')
+    LTS_MPS_WORKFLOW = True
+else:
+    LTS_MPS_WORKFLOW = False
 
 # CORS headers
 CORS_ALLOW_ALL_ORIGINS = True
