@@ -26,10 +26,10 @@ jobs:
         if: steps.python-cache.outputs.cache-hit != 'true'
       - name: Run isort
         run: |
-          isort src --check
+          isort media_management_api --check
       - name: Run black
         run: |
-          black src --check --diff
+          black media_management_api --check --diff
       - name: Run flake8
         run: |
-          flake8 src
+          flake8 media_management_api
