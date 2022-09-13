@@ -1,3 +1,6 @@
+[tool.isort]
+profile="black"
+
 [tool.poetry]
 name = "media_management_api"
 version = "3.0.0"
