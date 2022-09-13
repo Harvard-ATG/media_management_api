@@ -7,6 +7,8 @@ on:
     paths:
       - 'media_management_api/**'
       - .github/workflows/ci.yml
+      - pyproject.toml
+      - .flake8
 
 jobs:
   qa:
