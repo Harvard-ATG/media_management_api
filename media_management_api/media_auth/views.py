@@ -1,10 +1,11 @@
-from django.http import HttpResponseNotFound, HttpResponseBadRequest, JsonResponse
-from django.views.decorators.http import require_http_methods
+import logging
+
+from django.http import HttpResponseBadRequest, HttpResponseNotFound, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+
 from . import services
 from .exceptions import InvalidTokenError
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,9 @@ def authorize_user(request):
         return HttpResponseBadRequest("Missing course ID from token")
 
     try:
-        services.get_course_user(decoded_token) # strange name for this function
+        services.get_course_user(decoded_token)  # strange name for this function
     except InvalidTokenError:
-        logger.warning(f"JWT failed to authorize user because course does not exist")
+        logger.warning("JWT failed to authorize user because course does not exist")
         return HttpResponseNotFound("Course not found")
 
     logger.info(f"Authorized user: {decoded_token}")

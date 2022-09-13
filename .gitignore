@@ -20,3 +20,5 @@ htmlcov
 .envrc
 .python-version
 .vscode
+.env
+mps_key

@@ -1,38 +1,40 @@
-from django.urls import reverse
-from django.conf import settings
 import json
 
+from django.conf import settings
+from django.urls import reverse
+
+
 class IIIFObject(object):
-    '''
+    """
     IIIF Object is the base object for IIIF presentation classes.
 
     This class contains shared behaviors and methods that should be implemented.
 
     See also: http://iiif.io/api/presentation/2.0/
-    '''
+    """
 
     def url(self):
-        '''Returns an absolute URL to the object.'''
+        """Returns an absolute URL to the object."""
         raise Exception("not implemented yet")
 
     def to_dict(self):
-        '''Returns itself as a dictionary.'''
+        """Returns itself as a dictionary."""
         raise Exception("not implemented yet")
 
     def to_json(self):
-        '''Returns itself as JSON.'''
+        """Returns itself as JSON."""
         obj = self.to_dict()
-        if DEBUG:
-            return json.dumps(obj, sort_keys=True, indent=4, separators=(',', ': '))
+        if settings.DEBUG:
+            return json.dumps(obj, sort_keys=True, indent=4, separators=(",", ": "))
         return json.dumps(obj)
 
     def __unicode__(self):
-        '''Returns a string representation.'''
+        """Returns a string representation."""
         return self.to_json()
 
 
 class IIIFManifest(IIIFObject):
-    '''
+    """
     IIIFManifest represents a collection of images and defines the overall structure
     of the collection.
 
@@ -68,35 +70,37 @@ class IIIFManifest(IIIFObject):
     ])
     output = manifest.to_json()
     print(output)
-    '''
+    """
 
     def __init__(self, request, manifest_id, **kwargs):
         self.request = request
         self.id = manifest_id
-        self.label = kwargs.get('label', '')
-        self.description = kwargs.get('description', '')
+        self.label = kwargs.get("label", "")
+        self.description = kwargs.get("description", "")
         self.sequences = []
-        if 'images' in kwargs:
-            self.create(images=kwargs.get('images'))
+        if "images" in kwargs:
+            self.create(images=kwargs.get("images"))
 
     def create(self, images=None):
         if images is None:
             images = []
         seq = self.add_sequence(1)
         for n, img in enumerate(images, start=1):
-            if img['is_iiif']:
-                can = seq.add_canvas(img['id'])
-                can.set_label(img['label'])
-                can.set_description(img['description'])
-                can.set_metadata(img['metadata'])
-                can.add_image({
-                    'id': img['id'],
-                    'url': img['url'],
-                    'format': img.get('format', None),
-                    'height': img.get('height', None),
-                    'width': img.get('width', None),
-                    'is_iiif': img.get('is_iiif', True),
-                })
+            if img["is_iiif"]:
+                can = seq.add_canvas(img["id"])
+                can.set_label(img["label"])
+                can.set_description(img["description"])
+                can.set_metadata(img["metadata"])
+                can.add_image(
+                    {
+                        "id": img["id"],
+                        "url": img["url"],
+                        "format": img.get("format", None),
+                        "height": img.get("height", None),
+                        "width": img.get("width", None),
+                        "is_iiif": img.get("is_iiif", True),
+                    }
+                )
         return self
 
     def add_sequence(self, sequence_id):
@@ -125,11 +129,11 @@ class IIIFManifest(IIIFObject):
     def build_absolute_url(self, route, route_args=None):
         if route_args is None:
             route_args = {}
-        route_args['manifest_id'] = self.id
+        route_args["manifest_id"] = self.id
         return self.request.build_absolute_uri(reverse(route, kwargs=route_args))
 
     def url(self):
-        return self.build_absolute_url('api:iiif:manifest')
+        return self.build_absolute_url("api:iiif:manifest")
 
     def to_dict(self):
         manifest = {
@@ -138,7 +142,7 @@ class IIIFManifest(IIIFObject):
             "@id": self.url(),
             "label": self.label,
             "description": self.description,
-            "sequences": [sequence.to_dict() for sequence in self.sequences]
+            "sequences": [sequence.to_dict() for sequence in self.sequences],
         }
         return manifest
 
@@ -160,10 +164,9 @@ class IIIFSequence(IIIFObject):
         return canvas
 
     def url(self):
-        return self.manifest.build_absolute_url('api:iiif:sequence', {
-            'object_type': 'sequence',
-            'object_id': self.id
-        })
+        return self.manifest.build_absolute_url(
+            "api:iiif:sequence", {"object_type": "sequence", "object_id": self.id}
+        )
 
     def to_dict(self):
         sequence = {
@@ -179,8 +182,8 @@ class IIIFCanvas(IIIFObject):
     def __init__(self, manifest, canvas_id):
         self.manifest = manifest
         self.id = canvas_id
-        self.label = 'Image'
-        self.description = ''
+        self.label = "Image"
+        self.description = ""
         self.metadata = []
         self.width = 100  # TODO: get real width
         self.height = 100  # TODO: get real height
@@ -188,10 +191,10 @@ class IIIFCanvas(IIIFObject):
 
     def add_image(self, image):
         self.resource = IIIFImageResource(self.manifest, self.id, image)
-        if image['width'] is not None:
-            self.width = image['width']
-        if image['height'] is not None:
-            self.height = image['height']
+        if image["width"] is not None:
+            self.width = image["width"]
+        if image["height"] is not None:
+            self.height = image["height"]
         return self
 
     def set_label(self, label):
@@ -204,34 +207,35 @@ class IIIFCanvas(IIIFObject):
         self.metadata = metadata
 
     def url(self):
-        return self.manifest.build_absolute_url('api:iiif:canvas', {
-            'object_type': 'canvas',
-            'object_id': self.id
-        })
+        return self.manifest.build_absolute_url(
+            "api:iiif:canvas", {"object_type": "canvas", "object_id": self.id}
+        )
 
     def to_dict(self):
         canvas = {
             "@id": self.url(),
             "@type": "sc:Canvas",
             "label": self.label,
-            "images": [{
-                "@id": self.manifest.build_absolute_url('api:iiif:annotation', {
-                    'object_type': 'annotation',
-                    'object_id': self.id
-                }),
-                "@type": "oa:Annotation",
-                "motivation": "sc:painting",
-                "resource": self.resource.to_dict(),
-                "on": self.url(),
-            }],
+            "images": [
+                {
+                    "@id": self.manifest.build_absolute_url(
+                        "api:iiif:annotation",
+                        {"object_type": "annotation", "object_id": self.id},
+                    ),
+                    "@type": "oa:Annotation",
+                    "motivation": "sc:painting",
+                    "resource": self.resource.to_dict(),
+                    "on": self.url(),
+                }
+            ],
         }
         if self.description:
-            canvas['description'] = self.description
+            canvas["description"] = self.description
         if self.metadata:
-            canvas['metadata'] = self.metadata
+            canvas["metadata"] = self.metadata
         if self.width is not None and self.height is not None:
-            canvas['width'] = self.width
-            canvas['height'] = self.height
+            canvas["width"] = self.width
+            canvas["height"] = self.height
         return canvas
 
 
@@ -239,17 +243,16 @@ class IIIFImageResource(IIIFObject):
     def __init__(self, manifest, resource_id, image):
         self.manifest = manifest
         self.id = resource_id
-        self.image_url = image['url']
-        self.format = image.get('format', None)
-        self.is_iiif = image.get('is_iiif', False)
-        self.width = image.get('width', None)
-        self.height = image.get('height', None)
+        self.image_url = image["url"]
+        self.format = image.get("format", None)
+        self.is_iiif = image.get("is_iiif", False)
+        self.width = image.get("width", None)
+        self.height = image.get("height", None)
 
     def url(self):
-        return self.manifest.build_absolute_url('api:iiif:resource', {
-            'object_type': 'resource',
-            'object_id': self.id
-        })
+        return self.manifest.build_absolute_url(
+            "api:iiif:resource", {"object_type": "resource", "object_id": self.id}
+        )
 
     def to_dict(self):
         if not self.is_iiif:
@@ -258,23 +261,27 @@ class IIIFImageResource(IIIFObject):
                 "@type": "dctypes:Image",
             }
         else:
-            iiif_url_params = dict(base_url=self.image_url, region='full', size='full', rotation=0)
+            iiif_url_params = dict(
+                base_url=self.image_url, region="full", size="full", rotation=0
+            )
             max_size = 1024
             if self.width is not None and self.width > max_size:
-                iiif_url_params['size'] = str(max_size) + ','
+                iiif_url_params["size"] = str(max_size) + ","
 
             resource = {
-                "@id": '{base_url}/{region}/{size}/{rotation}/default.jpg'.format(**iiif_url_params),
+                "@id": "{base_url}/{region}/{size}/{rotation}/default.jpg".format(
+                    **iiif_url_params
+                ),
                 "@type": "dctypes:Image",
                 "service": {
                     "@id": self.image_url,
                     "@context": "http://iiif.io/api/image/2/context.json",
                     "profile": "http://iiif.io/api/image/2/level1.json",
-                }
+                },
             }
         if self.format:
-            resource['format'] = self.format
+            resource["format"] = self.format
         if self.width and self.height:
-            resource['width'] = self.width
-            resource['height'] = self.height
+            resource["width"] = self.width
+            resource["height"] = self.height
         return resource

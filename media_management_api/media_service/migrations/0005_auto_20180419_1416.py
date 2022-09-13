@@ -8,13 +8,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('media_service', '0004_auto_20170329_1530'),
+        ("media_service", "0004_auto_20170329_1530"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='collection',
-            name='custom_iiif_manifest_url',
+            model_name="collection",
+            name="custom_iiif_manifest_url",
             field=models.CharField(blank=True, max_length=4096),
         ),
     ]
