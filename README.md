@@ -35,7 +35,7 @@ $ docker tag harvard-atg/media_management_api:latest harvard-atg/media_managemen
 
 The requirements are stored in `pyproject.toml`, and `poetry.lock` contains the actual dependencies as installed in the virtual environment that can be used for development. Poetry installation instructions are available in [Poetry documentation](https://python-poetry.org/docs/).
 
-With poetry installed, you can specify a python execeutable with `poetry env use /path/to/python`, so it plays nice with [pyenv](https://github.com/pyenv/pyenv). Then a `poetry install` will install dependencies and `poetry shell` will get you into the environment. Add dependencies with `poetry add packagename`, or `poetry add --dev packagename` for dev dependencies. Check out [Poetry documentation](https://python-poetry.org/docs/) for a full overview.
+With poetry installed, you can specify a python executable with `poetry env use /path/to/python`, so it plays nice with [pyenv](https://github.com/pyenv/pyenv). Then a `poetry install` will install dependencies and `poetry shell` will get you into the environment. Add dependencies with `poetry add packagename`, or `poetry add --dev packagename` for dev dependencies. Check out [Poetry documentation](https://python-poetry.org/docs/) for a full overview.
 
 **Pre-commit hooks**
 

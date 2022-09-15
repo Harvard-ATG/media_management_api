@@ -25,6 +25,7 @@ jobs:
           python-version: 3.9
       - name: Install deps using Pip
         run: pip install isort black flake8
+        # use a cache action to speed things up, see https://github.com/actions/cache
         if: steps.python-cache.outputs.cache-hit != 'true'
       - name: Run isort
         run: |
