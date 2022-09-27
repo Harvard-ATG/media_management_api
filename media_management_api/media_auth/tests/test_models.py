@@ -2,7 +2,7 @@ import unittest
 
 from ..models import Application
 
-CLIENT_SECRET_LENGTH = 40 # sha1 hex digest; should be exactly this long
+CLIENT_SECRET_LENGTH = 40  # sha1 hex digest; should be exactly this long
 
 
 class TestSignals(unittest.TestCase):

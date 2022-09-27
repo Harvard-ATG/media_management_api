@@ -1,12 +1,16 @@
-from .models import Course, CourseUser, UserProfile
+import logging
+
 from rest_framework.exceptions import APIException
 
-import logging
+from .models import CourseUser, UserProfile
+
 logger = logging.getLogger(__name__)
+
 
 class PrimaryKeyFilterBackend(object):
     def filter_queryset(self, request, queryset, view):
-        return queryset.filter(pk=self.kwargs['pk'])
+        return queryset.filter(pk=self.kwargs["pk"])
+
 
 class IsCourseUserFilterBackend(object):
     def filter_queryset(self, request, queryset, view):
@@ -25,9 +29,9 @@ class IsCourseUserFilterBackend(object):
         # Limit queryset to the courses that the user belongs to
         course_ids = CourseUser.get_course_ids(user_profile)
         filter_key = "pk__in"
-        if hasattr(view, 'course_user_filter_key'):
+        if hasattr(view, "course_user_filter_key"):
             filter_key = view.course_user_filter_key
-        filters = {filter_key:list(course_ids)}
+        filters = {filter_key: list(course_ids)}
         logger.debug("Filtering queryset: %s" % filters)
 
         return queryset.filter(**filters)

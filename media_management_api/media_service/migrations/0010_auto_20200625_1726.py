@@ -8,23 +8,35 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('media_service', '0009_auto_20190204_1606'),
+        ("media_service", "0009_auto_20190204_1606"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='collection',
-            name='iiif_source',
-            field=models.CharField(choices=[('images', 'Collection Images'), ('custom', 'IIIF Manifest')], default='images', max_length=100),
+            model_name="collection",
+            name="iiif_source",
+            field=models.CharField(
+                choices=[("images", "Collection Images"), ("custom", "IIIF Manifest")],
+                default="images",
+                max_length=100,
+            ),
         ),
         migrations.AlterField(
-            model_name='coursecopy',
-            name='data',
-            field=models.TextField(blank=True, default='{}'),
+            model_name="coursecopy",
+            name="data",
+            field=models.TextField(blank=True, default="{}"),
         ),
         migrations.AlterField(
-            model_name='coursecopy',
-            name='state',
-            field=models.CharField(choices=[('initiated', 'Initiated'), ('completed', 'Completed'), ('error', 'Error')], default='initiated', max_length=100),
+            model_name="coursecopy",
+            name="state",
+            field=models.CharField(
+                choices=[
+                    ("initiated", "Initiated"),
+                    ("completed", "Completed"),
+                    ("error", "Error"),
+                ],
+                default="initiated",
+                max_length=100,
+            ),
         ),
     ]

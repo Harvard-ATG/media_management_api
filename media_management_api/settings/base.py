@@ -7,9 +7,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/{{ docs_version }}/ref/settings/
 """
 
+import logging
 import os
 import sys
-import logging
+
 from .secure import SECURE_SETTINGS
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -18,40 +19,42 @@ from .secure import SECURE_SETTINGS
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = SECURE_SETTINGS.get('django_secret_key', 'changeme')
+SECRET_KEY = SECURE_SETTINGS.get("django_secret_key", "changeme")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = SECURE_SETTINGS.get('enable_debug', False)
+DEBUG = SECURE_SETTINGS.get("enable_debug", False)
 
 # Application definition
 
 INSTALLED_APPS = [
     #  'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.admin',
-    'rest_framework',
-    'corsheaders',
-    'media_management_api.media_auth',
-    'media_management_api.media_service',
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.admin",
+    "rest_framework",
+    "corsheaders",
+    "media_management_api.media_auth",
+    "media_management_api.media_service",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'media_management_api.middleware.ExceptionLoggingMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "media_management_api.middleware.ExceptionLoggingMiddleware",
 ]
 
 if DEBUG:
-    MIDDLEWARE = ['media_management_api.middleware.QueryCountDebugMiddleware'] + MIDDLEWARE
+    MIDDLEWARE = [
+        "media_management_api.middleware.QueryCountDebugMiddleware"
+    ] + MIDDLEWARE
 
 # Authentication
 
@@ -60,53 +63,53 @@ if DEBUG:
 # AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend',)
 # LOGIN_URL = '/accounts/login'
 
-ROOT_URLCONF = 'media_management_api.urls'
+ROOT_URLCONF = "media_management_api.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
-            'debug': DEBUG,
+            "debug": DEBUG,
         },
     },
 ]
 
-WSGI_APPLICATION = 'media_management_api.wsgi.application'
+WSGI_APPLICATION = "media_management_api.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': SECURE_SETTINGS.get('db_default_name', 'media_management_api'),
-        'USER': SECURE_SETTINGS.get('db_default_user', 'postgres'),
-        'PASSWORD': SECURE_SETTINGS.get('db_default_password'),
-        'HOST': SECURE_SETTINGS.get('db_default_host', '127.0.0.1'),
-        'PORT': SECURE_SETTINGS.get('db_default_port', 5432),  # Default postgres port
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": SECURE_SETTINGS.get("db_default_name", "media_management_api"),
+        "USER": SECURE_SETTINGS.get("db_default_user", "postgres"),
+        "PASSWORD": SECURE_SETTINGS.get("db_default_password"),
+        "HOST": SECURE_SETTINGS.get("db_default_host", "127.0.0.1"),
+        "PORT": SECURE_SETTINGS.get("db_default_port", 5432),  # Default postgres port
     },
 }
 
 # File uploads
 FILE_UPLOAD_HANDLERS = [
     "django.core.files.uploadhandler.MemoryFileUploadHandler",
-    "django.core.files.uploadhandler.TemporaryFileUploadHandler"
- ]
+    "django.core.files.uploadhandler.TemporaryFileUploadHandler",
+]
 
 # Sessions
 # https://docs.djangoproject.com/en/1.8/topics/http/sessions/#module-django.contrib.sessions
 
 # Store sessions in default cache defined below
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_COOKIE_NAME = 'media_management_api_sid'
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_COOKIE_NAME = "media_management_api_sid"
 # NOTE: This setting only affects the session cookie, not the expiration of the session
 # being stored in the cache.  The session keys will expire according to the value of
 # SESSION_COOKIE_AGE (https://docs.djangoproject.com/en/1.8/ref/settings/#session-cookie-age),
@@ -116,29 +119,27 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # Cache
 # https://docs.djangoproject.com/en/1.8/ref/settings/#std:setting-CACHES
 
-REDIS_HOST = SECURE_SETTINGS.get('redis_host', '127.0.0.1')
-REDIS_PORT = SECURE_SETTINGS.get('redis_port', 6379)
+REDIS_HOST = SECURE_SETTINGS.get("redis_host", "127.0.0.1")
+REDIS_PORT = SECURE_SETTINGS.get("redis_port", 6379)
 
 CACHES = {
-    'default': {
-        'BACKEND': 'redis_cache.RedisCache',
-        'LOCATION': "redis://%s:%s/0" % (REDIS_HOST, REDIS_PORT),
-        'OPTIONS': {
-            'PARSER_CLASS': 'redis.connection.HiredisParser'
-        },
-        'KEY_PREFIX': 'media_management_api',  # Provide a unique value for shared cache
+    "default": {
+        "BACKEND": "redis_cache.RedisCache",
+        "LOCATION": "redis://%s:%s/0" % (REDIS_HOST, REDIS_PORT),
+        "OPTIONS": {"PARSER_CLASS": "redis.connection.HiredisParser"},
+        "KEY_PREFIX": "media_management_api",  # Provide a unique value for shared cache
         # See following for default timeout (5 minutes as of 1.7):
         # https://docs.djangoproject.com/en/1.8/ref/settings/#std:setting-CACHES-TIMEOUT
-        'TIMEOUT': SECURE_SETTINGS.get('default_cache_timeout_secs', 300),
+        "TIMEOUT": SECURE_SETTINGS.get("default_cache_timeout_secs", 300),
     },
 }
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 # A boolean that specifies whether Django's translation system should be enabled. This provides
 # an easy way to turn it off, for performance. If this is set to False, Django will make some
 # optimizations so as not to load the translation machinery.
@@ -157,8 +158,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 # This directory is being ignored by git
-STATIC_ROOT = os.path.normpath(os.path.join(BASE_DIR, 'http_static'))
-STATIC_URL = '/static/'
+STATIC_ROOT = os.path.normpath(os.path.join(BASE_DIR, "http_static"))
+STATIC_URL = "/static/"
 
 # Logging
 # https://docs.djangoproject.com/en/1.8/topics/logging/#configuring-logging
@@ -167,81 +168,83 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/1.8/topics/logging/#disabling-logging-configuration
 LOGGING_CONFIG = None
 
-_DEFAULT_LOG_LEVEL = SECURE_SETTINGS.get('log_level', logging.DEBUG)
-_LOG_ROOT = SECURE_SETTINGS.get('log_root', '')
+_DEFAULT_LOG_LEVEL = SECURE_SETTINGS.get("log_level", logging.DEBUG)
+_LOG_ROOT = SECURE_SETTINGS.get("log_root", "")
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s\t%(asctime)s.%(msecs)03dZ\t%(name)s:%(lineno)s\t%(message)s',
-            'datefmt': '%Y-%m-%dT%H:%M:%S'
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)s\t%(asctime)s.%(msecs)03dZ\t%(name)s:%(lineno)s\t%(message)s",
+            "datefmt": "%Y-%m-%dT%H:%M:%S",
         },
-        'simple': {
-            'format': '%(levelname)s\t%(name)s:%(lineno)s\t%(message)s',
+        "simple": {
+            "format": "%(levelname)s\t%(name)s:%(lineno)s\t%(message)s",
         },
     },
-    'handlers': {
+    "handlers": {
         # By default, log to a file
-        'default': {
-            'class': 'logging.handlers.WatchedFileHandler',
-            'level': _DEFAULT_LOG_LEVEL,
-            'formatter': 'verbose',
-            'filename': os.path.join(_LOG_ROOT, 'django-media_management_api.log'),
+        "default": {
+            "class": "logging.handlers.WatchedFileHandler",
+            "level": _DEFAULT_LOG_LEVEL,
+            "formatter": "verbose",
+            "filename": os.path.join(_LOG_ROOT, "django-media_management_api.log"),
         },
-        'console': {
-            'level' : 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'simple'
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "simple",
         },
     },
-    'loggers': {
+    "loggers": {
         # Root logger
-        '': {
-            'level': 'WARNING',
-            'handlers': ['default', 'console'],
+        "": {
+            "level": "WARNING",
+            "handlers": ["default", "console"],
         },
         # Add app or module specific loggers here.
-        'django': {
-            'handlers': ['console', 'default'],
-            'level': 'INFO',
-            'propagate': False,
+        "django": {
+            "handlers": ["console", "default"],
+            "level": "INFO",
+            "propagate": False,
         },
-        'django.db': {
-            'handlers': ['console', 'default'],
-            'level': 'INFO', # Set to DEBUG to see SQL output
-            'propagate': False,
+        "django.db": {
+            "handlers": ["console", "default"],
+            "level": "INFO",  # Set to DEBUG to see SQL output
+            "propagate": False,
         },
-        'media_management_api': {
-            'handlers': ['console', 'default'],
-            'level': 'DEBUG',
-            'propagate': False,
+        "media_management_api": {
+            "handlers": ["console", "default"],
+            "level": "DEBUG",
+            "propagate": False,
         },
     },
 }
 
 # Other project specific settings
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+    "DEFAULT_RENDERER_CLASSES": (
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
     ),
-    'DEFAULT_PARSER_CLASSES': (
-        'rest_framework.parsers.JSONParser',
-        'rest_framework.parsers.FormParser',
-        'rest_framework.parsers.MultiPartParser'
+    "DEFAULT_PARSER_CLASSES": (
+        "rest_framework.parsers.JSONParser",
+        "rest_framework.parsers.FormParser",
+        "rest_framework.parsers.MultiPartParser",
     ),
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-         'rest_framework.authentication.SessionAuthentication',
-         'media_management_api.media_auth.authentication.CustomJWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework.authentication.SessionAuthentication",
+        "media_management_api.media_auth.authentication.CustomJWTAuthentication",
     ),
-    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
 
 # IIIF settings
-IIIF_IMAGE_SERVER_URL = SECURE_SETTINGS.get('iiif_image_server_url', 'http://localhost:8000/loris/')
+IIIF_IMAGE_SERVER_URL = SECURE_SETTINGS.get(
+    "iiif_image_server_url", "http://localhost:8000/loris/"
+)
 
 # AWS Settings
 # Used to store media files in an S3 bucket.
@@ -257,13 +260,13 @@ AWS_S3_KEY_PREFIX = SECURE_SETTINGS["aws_s3_key_prefix"]
 # CORS headers
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = (
-        'x-requested-with',
-        'X-File-Size',
-        'content-type',
-        'accept',
-        'origin',
-        'authorization',
-        'x-csrftoken'
-    )
+    "x-requested-with",
+    "X-File-Size",
+    "content-type",
+    "accept",
+    "origin",
+    "authorization",
+    "x-csrftoken",
+)
 
-DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"

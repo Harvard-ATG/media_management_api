@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - 'media_management_api/**'
+      - .github/workflows/ci.yml
+      - pyproject.toml
+      - .flake8
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install deps using Pip
+        run: pip install isort black flake8
+        # use a cache action to speed things up, see https://github.com/actions/cache
+        if: steps.python-cache.outputs.cache-hit != 'true'
+      - name: Run isort
+        run: |
+          isort media_management_api --check
+      - name: Run black
+        run: |
+          black media_management_api --check --diff
+      - name: Run flake8
+        run: |
+          flake8 media_management_api

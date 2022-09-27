@@ -10,7 +10,7 @@ SECURE_SETTINGS = {
     'redis_host': 'redis',
     'aws_access_key_id': '',
     'aws_access_secret_key': '',
-    'aws_s3_bucket': '', 
+    'aws_s3_bucket': '',
     'aws_s3_key_prefix': 'local', # local-username|dev|qa|stage|production,
     'iiif_image_server_url': 'http://localhost:9000/loris/',
 }

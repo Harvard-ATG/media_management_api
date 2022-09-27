@@ -6,11 +6,11 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('media_auth', '0004_auto_20160209_1902'),
+        ("media_auth", "0004_auto_20160209_1902"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='Token',
+            name="Token",
         ),
     ]

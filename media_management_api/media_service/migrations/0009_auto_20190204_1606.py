@@ -3,19 +3,23 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
+
 import media_management_api.media_service.models
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('media_service', '0008_auto_20190130_0359'),
+        ("media_service", "0008_auto_20190130_0359"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='coursecopy',
-            name='data',
-            field=models.TextField(blank=True, default=media_management_api.media_service.models.metadata_default),
+            model_name="coursecopy",
+            name="data",
+            field=models.TextField(
+                blank=True,
+                default=media_management_api.media_service.models.metadata_default,
+            ),
         ),
     ]

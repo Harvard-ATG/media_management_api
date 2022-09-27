@@ -3,91 +3,141 @@
 from __future__ import unicode_literals
 
 import django.contrib.postgres.fields.jsonb
-from django.db import migrations, models
 import django.db.models.deletion
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('media_service', '0007_auto_20180518_1859'),
+        ("media_service", "0007_auto_20180518_1859"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CourseCopy',
+            name="CourseCopy",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('updated', models.DateTimeField(auto_now=True)),
-                ('state', models.CharField(choices=[(b'initiated', b'Initiated'), (b'completed', b'Completed'), (b'error', b'Error')], default=b'initiated', max_length=100)),
-                ('error', models.TextField()),
-                ('data', django.contrib.postgres.fields.jsonb.JSONField(default=b'{}')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("updated", models.DateTimeField(auto_now=True)),
+                (
+                    "state",
+                    models.CharField(
+                        choices=[
+                            (b"initiated", b"Initiated"),
+                            (b"completed", b"Completed"),
+                            (b"error", b"Error"),
+                        ],
+                        default=b"initiated",
+                        max_length=100,
+                    ),
+                ),
+                ("error", models.TextField()),
+                ("data", django.contrib.postgres.fields.jsonb.JSONField(default=b"{}")),
             ],
             options={
-                'ordering': ['-created'],
-                'verbose_name': 'course copy',
-                'verbose_name_plural': 'course copy',
+                "ordering": ["-created"],
+                "verbose_name": "course copy",
+                "verbose_name_plural": "course copy",
             },
         ),
         migrations.CreateModel(
-            name='CourseUser',
+            name="CourseUser",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created', models.DateTimeField(auto_now_add=True)),
-                ('updated', models.DateTimeField(auto_now=True)),
-                ('is_admin', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True)),
+                ("updated", models.DateTimeField(auto_now=True)),
+                ("is_admin", models.BooleanField(default=False)),
             ],
             options={
-                'verbose_name': 'course user',
-                'verbose_name_plural': 'course users',
+                "verbose_name": "course user",
+                "verbose_name_plural": "course users",
             },
         ),
         migrations.AlterModelOptions(
-            name='mediastore',
-            options={'verbose_name': 'media_store', 'verbose_name_plural': 'media_store'},
+            name="mediastore",
+            options={
+                "verbose_name": "media_store",
+                "verbose_name_plural": "media_store",
+            },
         ),
         migrations.RemoveField(
-            model_name='course',
-            name='lti_custom_canvas_api_domain',
+            model_name="course",
+            name="lti_custom_canvas_api_domain",
         ),
         migrations.AddField(
-            model_name='course',
-            name='canvas_course_id',
+            model_name="course",
+            name="canvas_course_id",
             field=models.IntegerField(null=True),
         ),
         migrations.AddField(
-            model_name='course',
-            name='sis_course_id',
+            model_name="course",
+            name="sis_course_id",
             field=models.CharField(max_length=128, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='collection',
-            name='iiif_source',
-            field=models.CharField(choices=[(b'images', b'Collection Images'), (b'custom', b'IIIF Manifest')], default=b'images', max_length=100),
+            model_name="collection",
+            name="iiif_source",
+            field=models.CharField(
+                choices=[
+                    (b"images", b"Collection Images"),
+                    (b"custom", b"IIIF Manifest"),
+                ],
+                default=b"images",
+                max_length=100,
+            ),
         ),
         migrations.AddField(
-            model_name='courseuser',
-            name='course',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='media_service.Course'),
+            model_name="courseuser",
+            name="course",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="media_service.Course"
+            ),
         ),
         migrations.AddField(
-            model_name='courseuser',
-            name='user_profile',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='media_service.UserProfile'),
+            model_name="courseuser",
+            name="user_profile",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="media_service.UserProfile",
+            ),
         ),
         migrations.AddField(
-            model_name='coursecopy',
-            name='dest',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='dest_copies', to='media_service.Course'),
+            model_name="coursecopy",
+            name="dest",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="dest_copies",
+                to="media_service.Course",
+            ),
         ),
         migrations.AddField(
-            model_name='coursecopy',
-            name='source',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='source_copies', to='media_service.Course'),
+            model_name="coursecopy",
+            name="source",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="source_copies",
+                to="media_service.Course",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='courseuser',
-            unique_together=set([('course', 'user_profile', 'is_admin')]),
+            name="courseuser",
+            unique_together=set([("course", "user_profile", "is_admin")]),
         ),
     ]
