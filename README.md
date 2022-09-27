@@ -39,7 +39,7 @@ With poetry installed, you can specify a python executable with `poetry env use 
 
 **Pre-commit hooks**
 
-After setting up and activating your environment, run 
+After setting up and activating your environment, run
 ```
 pre-commit install
 ```
