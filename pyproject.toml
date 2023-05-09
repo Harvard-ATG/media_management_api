@@ -9,7 +9,7 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-Django = "~=3.2.0"
+Django = "~=3.2.19"
 psycopg2-binary = "2.8.4"
 PyJWT = "~=2.1.0"
 redis = "2.10.3"
